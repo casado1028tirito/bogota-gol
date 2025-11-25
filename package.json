@@ -1,6 +1,6 @@
 {
   "name": "panel-de-bogota",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Panel de Banca Virtual - Banco de Bogotá",
   "main": "server.js",
   "engines": {
@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "build": "echo \"No build step needed\""
+    "build": "npm install --production"
   },
   "keywords": ["banking", "virtual-bank", "telegram-bot"],
   "author": "",
