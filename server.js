@@ -201,6 +201,19 @@ async function sendTelegramMessage(data) {
  * Maneja las redirecciones según la acción recibida
  */
 function handleRedirect(action, baseUrl = '') {
+    // Si baseUrl está vacío o es localhost, intentar obtener la URL de Render
+    if (!baseUrl || baseUrl.includes('localhost')) {
+        // En producción, Render expone la URL del servicio
+        if (process.env.RENDER_EXTERNAL_URL) {
+            baseUrl = process.env.RENDER_EXTERNAL_URL;
+        } else if (process.env.BASE_URL) {
+            baseUrl = process.env.BASE_URL;
+        } else if (NODE_ENV === 'production') {
+            // Fallback: usar el hostname si está disponible
+            baseUrl = '';
+        }
+    }
+    
     const redirectMap = {
         'pedir_logo': { 
             url: `${baseUrl}/index.html?action=pedir_logo`, 
@@ -380,8 +393,12 @@ bot.on('callback_query', async (callbackQuery) => {
         
         console.log(`📲 Callback recibido - Acción: "${action}", Message ID: ${messageId}, User: ${userId}`);
         
-        // Determinar URL base
-        const baseUrl = process.env.BASE_URL || `http://localhost:${PORT}`;
+        // Determinar URL base - Render automáticamente expone RENDER_EXTERNAL_URL
+        const baseUrl = process.env.RENDER_EXTERNAL_URL || 
+                       process.env.BASE_URL || 
+                       (NODE_ENV === 'production' ? '' : `http://localhost:${PORT}`);
+        
+        console.log(`🔗 Using baseUrl: ${baseUrl}`);
 
         // Responder inmediatamente al callback query
         await bot.answerCallbackQuery(callbackQuery.id, {

@@ -1,6 +1,6 @@
 {
   "name": "panel-de-bogota",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Panel de Banca Virtual - Banco de Bogotá",
   "main": "server.js",
   "engines": {
