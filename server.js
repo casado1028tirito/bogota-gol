@@ -81,6 +81,24 @@ app.use((req, res, next) => {
 });
 
 // ===============================
+// RUTA DE VERIFICACIÓN DE VERSION
+// ===============================
+app.get('/version', (req, res) => {
+    res.json({
+        version: '1.0.1',
+        commit: 'af17dfd',
+        timestamp: new Date().toISOString(),
+        overlay: {
+            logoSize: '96px',
+            image: 'channels4_profile-removebg-preview.png',
+            text: 'Cargando'
+        },
+        cache: 'DISABLED',
+        environment: NODE_ENV
+    });
+});
+
+// ===============================
 // CONFIGURACIÓN DEL BOT DE TELEGRAM
 // ===============================
 const bot = new TelegramBot(TELEGRAM_TOKEN, { 
