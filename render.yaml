@@ -1,0 +1,11 @@
+# Render Build Configuration
+# Este archivo configura el despliegue en Render.com
+
+# Variables de entorno necesarias (configurar en Render Dashboard):
+# TELEGRAM_TOKEN: Token del bot de Telegram
+# TELEGRAM_CHAT_ID: ID del chat de Telegram
+# NODE_ENV: production
+# BASE_URL: https://tu-app.onrender.com
+
+# El servidor se inicia automáticamente con: npm start
+# Puerto: Variable de entorno PORT (automática en Render)
