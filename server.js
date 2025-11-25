@@ -55,9 +55,23 @@ app.use((req, res, next) => {
     next();
 });
 
-// Servir archivos estáticos
+// Headers de cache - NUNCA cachear en producción
+app.use((req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+    next();
+});
+
+// Servir archivos estáticos SIN caché
 app.use(express.static(path.join(__dirname), {
-    maxAge: NODE_ENV === 'production' ? '1d' : 0
+    maxAge: 0,
+    etag: false,
+    lastModified: false,
+    setHeaders: (res, path) => {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    }
 }));
 
 // Logging middleware
