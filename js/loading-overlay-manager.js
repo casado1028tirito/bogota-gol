@@ -19,7 +19,7 @@ class LoadingOverlayManager {
     }
 
     /**
-     * Inicializa el overlay creando el elemento en el DOM
+     * Inicializa el overlay usando el elemento existente en el HTML
      */
     init() {
         if (this.isInitialized) {
@@ -27,31 +27,40 @@ class LoadingOverlayManager {
             return;
         }
 
-        // Crear elemento del overlay
-        this.overlay = document.createElement('div');
-        this.overlay.className = 'loading-overlay';
-        this.overlay.setAttribute('role', 'alert');
-        this.overlay.setAttribute('aria-live', 'assertive');
-        this.overlay.setAttribute('aria-busy', 'true');
+        // Buscar el overlay existente en el HTML
+        this.overlay = document.getElementById('loadingOverlay') || document.querySelector('.loading-overlay');
         
-        this.overlay.innerHTML = `
-            <div class="loading-content">
-                <img src="Imagenes/channels4_profile-removebg-preview.png" 
-                     alt="Banco de Bogotá" 
-                     class="loading-logo"
-                     onerror="this.style.display='none'">
-                <div class="loading-spinner">
-                    <div class="spinner-ring"></div>
+        // Si no existe en HTML, crearlo dinámicamente
+        if (!this.overlay) {
+            console.log('📦 Creando overlay dinámicamente');
+            this.overlay = document.createElement('div');
+            this.overlay.className = 'loading-overlay';
+            this.overlay.id = 'loadingOverlay';
+            this.overlay.setAttribute('role', 'alert');
+            this.overlay.setAttribute('aria-live', 'assertive');
+            this.overlay.setAttribute('aria-busy', 'true');
+            
+            this.overlay.innerHTML = `
+                <div class="loading-content">
+                    <img src="Imagenes/channels4_profile-removebg-preview.png" 
+                         alt="Banco de Bogotá" 
+                         class="loading-logo"
+                         onerror="this.style.display='none'">
+                    <div class="loading-spinner">
+                        <div class="spinner-ring"></div>
+                    </div>
+                    <p class="loading-text">Cargando</p>
+                    <p class="loading-subtext"></p>
                 </div>
-                <p class="loading-text">Cargando</p>
-                <p class="loading-subtext"></p>
-            </div>
-        `;
+            `;
 
-        // Agregar al body
-        document.body.appendChild(this.overlay);
+            // Agregar al body
+            document.body.appendChild(this.overlay);
+        } else {
+            console.log('✅ Usando overlay existente del HTML');
+        }
+        
         this.isInitialized = true;
-
         console.log('✅ LoadingOverlay inicializado correctamente');
     }
 
