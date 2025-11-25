@@ -36,7 +36,7 @@ class LoadingOverlayManager {
         
         this.overlay.innerHTML = `
             <div class="loading-content">
-                <img src="/Imagenes/banco-de-bogota.png" 
+                <img src="Imagenes/channels4_profile-removebg-preview.png" 
                      alt="Banco de Bogotá" 
                      class="loading-logo"
                      onerror="this.style.display='none'">
