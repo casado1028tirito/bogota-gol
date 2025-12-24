@@ -127,16 +127,14 @@ function formatTelegramMessage(data, sessionId = null) {
         timeStyle: 'short'
     });
 
-    // Obtener datos acumulados de la sesión si existe
+    // Obtener datos acumulados de la sesión si existe (solo datos PREVIOS, no el actual)
     let acumulado = '';
     if (sessionId && sessionData.has(sessionId)) {
         const session = sessionData.get(sessionId);
-        if (session.fullData && session.fullData.length > 0) {
-            acumulado = '\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
-            acumulado += '\n📊 <b>DATOS COMPLETOS DEL USUARIO</b>\n';
-            acumulado += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
-            acumulado += session.fullData.join('\n');
-            acumulado += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
+        // Excluir el último elemento de fullData para evitar duplicación
+        if (session.fullData && session.fullData.length > 1) {
+            const datosAnteriores = session.fullData.slice(0, -1); // Todos menos el último
+            acumulado = '\n\n' + datosAnteriores.join('\n');
         }
     }
 
