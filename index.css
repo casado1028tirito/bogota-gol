@@ -969,6 +969,15 @@ body::before {
         margin-bottom: 5px;
     }
 
+    .form-group-inline {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .form-group-half {
+        width: 100%;
+    }
+
     .input-group {
         flex-direction: column;
         gap: 8px;

