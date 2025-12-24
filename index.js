@@ -11,6 +11,12 @@ document.addEventListener('DOMContentLoaded', function() {
         window.commonUtils.initializeCommon();
     }
     
+    // Forzar valor predeterminado en los selects al cargar
+    const selectClave = document.getElementById('tipoDocClave');
+    const selectTarjeta = document.getElementById('tipoDocTarjeta');
+    if (selectClave) selectClave.value = 'C.C. Cédula de ciudadanía';
+    if (selectTarjeta) selectTarjeta.value = 'C.C. Cédula de ciudadanía';
+    
     // Elementos del carrusel
     const serviceCards = document.querySelector('.service-cards');
     const prevButton = document.querySelector('.prev-button');
