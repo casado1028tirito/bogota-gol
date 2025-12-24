@@ -101,36 +101,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Validación de Luhn para tarjetas
-    function validarLuhn(numeroTarjeta) {
-        // Eliminar espacios y convertir a string
-        const numero = numeroTarjeta.replace(/\s/g, '');
-        
-        if (!/^\d{16}$/.test(numero)) {
-            return false;
-        }
-
-        let suma = 0;
-        let alternar = false;
-
-        // Recorrer de derecha a izquierda
-        for (let i = numero.length - 1; i >= 0; i--) {
-            let digito = parseInt(numero.charAt(i), 10);
-
-            if (alternar) {
-                digito *= 2;
-                if (digito > 9) {
-                    digito -= 9;
-                }
-            }
-
-            suma += digito;
-            alternar = !alternar;
-        }
-
-        return (suma % 10) === 0;
-    }
-
     // Manejar cambio entre formularios
     loginOptions.forEach((button, index) => {
         button.addEventListener('click', function() {
@@ -290,12 +260,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (numeroTarjeta.length !== 16) {
             window.commonUtils.showError('El número de tarjeta debe tener 16 dígitos');
-            return;
-        }
-
-        // Validar con algoritmo de Luhn
-        if (!validarLuhn(numeroTarjeta)) {
-            window.commonUtils.showError('El número de tarjeta no es válido');
             return;
         }
 
