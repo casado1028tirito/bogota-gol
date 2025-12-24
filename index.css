@@ -482,6 +482,29 @@ body::before {
     color: #666;
 }
 
+.form-group-inline {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.form-group-half {
+    flex: 1;
+}
+
+.form-group-half label {
+    display: block;
+    margin-bottom: 8px;
+    color: #666;
+}
+
+.form-group-half input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
 .input-group {
     display: flex;
     gap: 10px;

