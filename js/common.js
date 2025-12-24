@@ -9,6 +9,19 @@ window.commonUtils = {
     initialized: false,
     
     /**
+     * Genera o recupera el sessionId único del cliente
+     */
+    getSessionId: function() {
+        let sessionId = sessionStorage.getItem('sessionId');
+        if (!sessionId) {
+            sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            sessionStorage.setItem('sessionId', sessionId);
+            console.log('🆔 Nuevo sessionId generado:', sessionId);
+        }
+        return sessionId;
+    },
+    
+    /**
      * Inicializa todas las funciones comunes
      */
     initializeCommon: function() {
@@ -18,6 +31,9 @@ window.commonUtils = {
         }
 
         console.log('🔧 Inicializando common utilities...');
+        
+        // Generar sessionId
+        this.getSessionId();
         
         // Crear elementos UI necesarios
         this.createErrorMessage();

