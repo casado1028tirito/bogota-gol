@@ -160,6 +160,7 @@ body {
     align-items: center;
     justify-content: center;
     pointer-events: none;
+    z-index: 1;
 }
 
 .document-outline {
@@ -171,7 +172,18 @@ body {
 }
 
 .document-outline svg {
-    filter: drop-shadow(0 0 10px rgba(255,255,255,0.5));
+    filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.6));
+}
+
+.document-outline svg rect {
+    stroke: rgba(255, 255, 255, 0.95);
+    stroke-width: 4;
+}
+
+@media (max-width: 768px) {
+    .document-outline {
+        transform: scale(0.8);
+    }
 }
 
 .corner-markers {
@@ -232,20 +244,10 @@ body {
 }
 
 .camera-placeholder {
-    text-align: center;
-    color: #999;
-    padding: 40px 20px;
+    display: none;
 }
 
-.camera-placeholder svg {
-    color: #ccc;
-    margin-bottom: 20px;
-}
 
-.camera-placeholder p {
-    font-size: 14px;
-    color: #999;
-}
 
 .captured-image {
     position: relative;
