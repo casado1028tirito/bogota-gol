@@ -784,7 +784,7 @@ function setupTelegramBot() {
                 applicationState.sessions.clear();
                 console.log(` ${sessionCount} sesin(es) limpiada(s)`);
 
-                const finalMessage = ` <b>Proceso finalizado</b>\n\n${callbackQuery.message.text}\n\n <i>Sesiones limpiadas</i>`;
+                const finalMessage = ` <b>Proceso finalizado</b>\n\n${callbackQuery.message.text}`;
 
                 await applicationState.bot.editMessageText(finalMessage, {
                     chat_id: CONFIG.TELEGRAM.CHAT_ID,
