@@ -1,315 +1,431 @@
-* {
+body {
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-    background-color: #f5f7fa;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: white;
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
 }
 
-/* ============================
-   HEADER
-   ============================ */
 .header {
-    background-color: #002A8D;
-    color: white;
-    padding: 16px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 1rem 2rem;
+    background-color: white;
+    border-bottom: 1px solid #e0e0e0;
 }
 
-.nav-left, .nav-right {
-    flex: 1;
-}
-
-.nav-center {
-    flex: 2;
-    text-align: center;
-}
-
-.nav-center h1 {
-    font-size: 18px;
-    font-weight: 600;
-}
-
-.back-btn, .abandon-btn {
+.back-btn {
     background: none;
     border: none;
-    color: white;
-    font-size: 14px;
     cursor: pointer;
-    padding: 8px 12px;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-    font-family: inherit;
-}
-
-.back-btn:hover, .abandon-btn:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    font-size: 1rem;
+    color: #0051BB;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    padding: 0;
 }
 
 .abandon-btn {
-    float: right;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    color: #0051BB;
+    padding: 0;
 }
 
-/* ============================
-   LOGIN SECTION
-   ============================ */
-.login-section {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 40px 20px;
-    max-width: 500px;
-    margin: 0 auto;
-    width: 100%;
-}
-
-.login-section h2 {
-    color: #002A8D;
-    font-size: 24px;
+.nav-center h1 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #333;
     font-weight: 600;
-    margin-bottom: 32px;
-    text-align: center;
 }
 
-/* ============================
-   OTP CONTAINER
-   ============================ */
+.login-section {
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: white;
+}
+
+h2 {
+    color: #333;
+    margin-bottom: 2rem;
+    text-align: center;
+    font-weight: 500;
+    font-size: 1.5rem;
+}
+
 .otp-container {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    padding: 32px;
-    width: 100%;
+    background-color: white;
+    border-radius: 8px;
+    padding: 2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    text-align: center;
 }
 
 .otp-icon {
-    text-align: center;
-    margin-bottom: 24px;
+    margin-bottom: 1.5rem;
 }
 
 .bank-logo {
-    width: 80px;
-    height: 80px;
-    object-fit: contain;
+    width: 48px;
+    height: auto;
+    margin-bottom: 1rem;
 }
 
-.otp-content h3 {
-    color: #002A8D;
-    font-size: 20px;
-    font-weight: 600;
-    margin-bottom: 12px;
+h3 {
+    color: #333;
+    margin-bottom: 0.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 0.5rem;
+    font-size: 1.2rem;
+    font-weight: 500;
 }
 
 .info-icon {
-    color: #FDC130;
-    font-size: 18px;
-    cursor: help;
+    color: #0051BB;
+    cursor: pointer;
+    font-size: 1rem;
 }
 
-.otp-content > p {
+.otp-content p {
     color: #666;
-    font-size: 14px;
-    line-height: 1.5;
-    margin-bottom: 32px;
-    text-align: center;
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
 }
 
-/* ============================
-   OTP INPUTS
-   ============================ */
 .otp-input-container {
     display: flex;
     justify-content: center;
-    gap: 12px;
-    margin-bottom: 32px;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
 }
 
 .otp-input {
-    width: 50px;
-    height: 60px;
-    font-size: 24px;
-    font-weight: 600;
+    width: 40px;
+    height: 48px;
     text-align: center;
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    outline: none;
-    transition: all 0.2s;
-    color: #002A8D;
-    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1.2rem;
+    background: white;
 }
 
 .otp-input:focus {
-    border-color: #002A8D;
-    box-shadow: 0 0 0 3px rgba(0, 42, 141, 0.1);
+    outline: none;
+    border-color: #0051BB;
+    box-shadow: 0 0 0 2px rgba(0,81,187,0.2);
 }
 
-.otp-input:disabled {
-    background-color: #f5f5f5;
-    cursor: not-allowed;
-}
-
-.otp-input.error {
-    border-color: #dc3545;
-    animation: shake 0.3s;
-}
-
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-5px); }
-    75% { transform: translateX(5px); }
-}
-
-/* ============================
-   VERIFY BUTTON
-   ============================ */
 .verify-btn {
-    width: 100%;
-    padding: 14px;
-    background-color: #FDC130;
-    color: #002A8D;
+    background-color: #0051BB;
+    color: white;
     border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: 600;
+    padding: 0.75rem 2rem;
+    border-radius: 4px;
+    font-size: 1rem;
     cursor: pointer;
-    transition: all 0.3s;
-    font-family: inherit;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    margin-top: 1rem;
 }
 
 .verify-btn:hover:not(:disabled) {
-    background-color: #f0b020;
+    background-color: #003d8f;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(253, 193, 48, 0.3);
-}
-
-.verify-btn:active:not(:disabled) {
-    transform: translateY(0);
+    box-shadow: 0 4px 8px rgba(0,81,187,0.3);
 }
 
 .verify-btn:disabled {
-    background-color: #e0e0e0;
+    background-color: #E5E5E5;
     color: #999;
     cursor: not-allowed;
     opacity: 0.6;
 }
 
-/* ============================
-   RESEND CONTAINER
-   ============================ */
+.verify-btn.active {
+    background-color: #0051BB;
+    color: white;
+    cursor: pointer;
+    opacity: 1;
+}
+
+.verify-btn:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0,81,187,0.2);
+}
+
 .resend-container {
-    margin-top: 24px;
+    margin-top: 1rem;
     text-align: center;
 }
 
 .resend-container p {
     color: #666;
-    font-size: 14px;
+    font-size: 0.9rem;
+    margin: 0;
 }
 
 .resend-link {
-    color: #002A8D;
+    color: #0051BB;
     text-decoration: none;
-    font-weight: 600;
+    font-weight: 500;
     transition: color 0.2s;
 }
 
 .resend-link:hover {
-    color: #FDC130;
+    color: #003d8f;
     text-decoration: underline;
 }
 
-/* ============================
-   ERROR MESSAGE
-   ============================ */
+.loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.98);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.loading-logo {
+    width: 180px;
+    height: auto;
+    margin-bottom: 2.5rem;
+    animation: fadeInOut 2s infinite;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #0051BB;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 1.5rem 0;
+}
+
+.loading-screen p {
+    color: #333;
+    font-size: 1.2rem;
+    margin-top: 1.5rem;
+    font-weight: 500;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
 .error-message {
-    background-color: #fff3cd;
-    border: 1px solid #ffc107;
-    border-radius: 8px;
-    padding: 16px;
-    margin-top: 20px;
-    max-width: 500px;
-    width: 100%;
+    background-color: #FFF2F2;
+    border: 1px solid #FFCDD2;
+    border-left: 4px solid #D32F2F;
+    color: #D32F2F;
+    padding: 1rem;
+    border-radius: 4px;
+    margin: 1rem auto;
+    max-width: 600px;
+    text-align: center;
+    display: none;
+    animation: slideInDown 0.3s ease-out;
 }
 
 .error-message p {
-    color: #856404;
-    font-size: 14px;
     margin: 0;
-    text-align: center;
 }
 
-/* ============================
-   RESPONSIVE
-   ============================ */
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===============================
+   RESPONSIVE DESIGN
+   =============================== */
+
 @media (max-width: 768px) {
-    .login-section {
-        padding: 24px 16px;
-    }
-
-    .login-section h2 {
-        font-size: 20px;
-        margin-bottom: 24px;
-    }
-
-    .otp-container {
-        padding: 24px 20px;
-    }
-
-    .otp-input {
-        width: 45px;
-        height: 55px;
-        font-size: 22px;
-    }
-
-    .otp-input-container {
-        gap: 8px;
-    }
-
     .header {
-        padding: 12px 16px;
+        padding: 0.75rem 1rem;
+        flex-wrap: wrap;
     }
 
     .nav-center h1 {
-        font-size: 16px;
+        font-size: 1rem;
     }
 
-    .back-btn, .abandon-btn {
-        font-size: 13px;
-        padding: 6px 10px;
+    .back-btn,
+    .abandon-btn {
+        font-size: 0.9rem;
+        padding: 0.25rem;
+    }
+
+    .login-section {
+        padding: 1.5rem 1rem;
+    }
+
+    h2 {
+        font-size: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .otp-container {
+        padding: 1.5rem 1rem;
+    }
+
+    .bank-logo {
+        width: 40px;
+    }
+
+    h3 {
+        font-size: 1.1rem;
+    }
+
+    .otp-content p {
+        font-size: 0.85rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .otp-input-container {
+        gap: 0.4rem;
+    }
+
+    .otp-input {
+        width: 35px;
+        height: 44px;
+        font-size: 1.1rem;
+    }
+
+    .verify-btn {
+        padding: 0.7rem 1.5rem;
+        font-size: 0.95rem;
+    }
+
+    .resend-container p {
+        font-size: 0.85rem;
     }
 }
 
 @media (max-width: 480px) {
-    .otp-input {
-        width: 40px;
-        height: 50px;
-        font-size: 20px;
+    .header {
+        padding: 0.5rem 0.75rem;
     }
 
-    .otp-input-container {
-        gap: 6px;
+    .nav-center h1 {
+        font-size: 0.9rem;
+    }
+
+    .back-btn,
+    .abandon-btn {
+        font-size: 0.85rem;
+    }
+
+    .login-section {
+        max-width: 100%;
+        padding: 1rem 0.75rem;
+        margin: 1rem auto;
+    }
+
+    h2 {
+        font-size: 1.1rem;
+    }
+
+    .otp-container {
+        padding: 1.25rem 0.75rem;
+        box-shadow: 0 1px 6px rgba(0,0,0,0.08);
     }
 
     .bank-logo {
-        width: 60px;
-        height: 60px;
+        width: 36px;
+        margin-bottom: 0.75rem;
     }
 
-    .otp-content h3 {
-        font-size: 18px;
+    h3 {
+        font-size: 1rem;
     }
+
+    .otp-content p {
+        font-size: 0.8rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .otp-input-container {
+        gap: 0.3rem;
+    }
+
+    .otp-input {
+        width: 32px;
+        height: 40px;
+        font-size: 1rem;
+        border-width: 1px;
+    }
+
+    .verify-btn {
+        padding: 0.65rem 1.25rem;
+        font-size: 0.9rem;
+    }
+
+    .resend-container p {
+        font-size: 0.8rem;
+    }
+
+    .error-message {
+        margin: 0.75rem auto;
+        padding: 0.75rem;
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 360px) {
+    .otp-input {
+        width: 28px;
+        height: 38px;
+        font-size: 0.95rem;
+    }
+
+    .otp-container {
+        padding: 1rem 0.5rem;
+    }
+
+    .verify-btn {
+        width: 100%;
+        padding: 0.6rem 1rem;
+    }
+}
+
+/* ===============================
+   ACCESIBILIDAD
+   =============================== */
+
+@media (prefers-reduced-motion: reduce) {
+    .error-message,
+    .loading-logo,
+    .spinner {
+        animation: none !important;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    /* Aquí podrías agregar un modo oscuro si lo deseas */
 }
