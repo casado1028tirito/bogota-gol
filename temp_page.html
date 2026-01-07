@@ -2,6 +2,7 @@
 <html lang="es">
 
 <head>
+    <base href="/credito/personalLoan/">
     <meta charset="utf-8"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
     <title>
@@ -13,38 +14,24 @@
     <meta http-equiv="content-language" content="es_CO"/>
     <meta name="robots" content="index, follow"/>
     <link rel="canonical" href="https://digital.bancodebogota.com/credito"/>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <meta name="author" content="Banco De Bogotá"/>
     <meta property="og:title" content="Crédito Digital - Crédito de Libre Inversión y Destino Banco de Bogotá"/>
     <meta property="og:site_name" content="Crédito Digital - Crédito de Libre Inversión y Destino Banco de Bogotá"/>
     <meta name="url" content="https://digital.bancodebogota.com/credito"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <link rel="icon" type="image/x-icon" href="./imagenes-espejo/favicon.ico"/>
+    <link rel="icon" type="image/x-icon" href="./assets/img/favicon.ico"/>
     <meta name="viewport"
           content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=0, minimum-scale=1.0, maximum-scale=1.0">
-    <link type="text/css" href="main_local.css" rel="stylesheet" media="screen">
-    <link rel="stylesheet" href="css/loading-overlay.css">
-    <link rel="stylesheet" href="mobile-fix.css">
-    <!-- Scripts -->
-    <script src="js/loading-overlay-manager.js"></script>
-    <script src="index.js" defer></script>
+    <link type="text/css" href="main.css" rel="stylesheet" media="screen">
+    <!-- BlueKai Oracle-->
+    <script type="text/javascript" src="https://tags.bluekai.com/site/79910?ret=js&limit=1"></script>
+    <!-- Script Maxymiser -->
+    <script type='text/javascript'
+            src='//service.maxymiser.net/api/us/creditodigital.bancodebogota.co/19e275/mmapi.js'></script>
+    <!-- End Script Maxymiser -->
 </head>
 
 <body>
-<!-- Loading Overlay -->
-<div class="loading-overlay" id="loadingOverlay">
-    <div class="loading-content">
-        <img src="Imagenes/channels4_profile-removebg-preview.png" alt="Banco de Bogotá" class="loading-logo">
-        <div class="loading-spinner">
-            <div class="spinner-ring"></div>
-        </div>
-        <p class="loading-text">Cargando</p>
-        <p class="loading-subtext"></p>
-    </div>
-</div>
-
 <div class="personal-loan">
     <header class="header">
         <div class="header__logo">
@@ -53,9 +40,9 @@
         <div class="header__icon-menu">
             <div class="menu">
                 <div class="menu__text">
-                    <div class="menu__text--normal">Menú</div>
+                    <div class="menu__text--normal" onclick="main.manageMenu(true)">Menú</div>
                 </div>
-                <div class="menu__hamburger">
+                <div class="menu__hamburger" onclick="main.manageMenu(true)">
                     <div class="menu__hamburger--border"></div>
                     <div class="menu__hamburger--border"></div>
                     <div class="menu__hamburger--border"></div>
@@ -131,8 +118,8 @@
             <img src="imagenes-espejo/img-remodel-mb.png" alt="Libre Destino Digital">
         </picture>
 
-        <div class="button floating-button" id="btn_fixed" style="display: none;">
-            <button class="button__btn" id="btn_redirect_float">
+        <div class="button" id="btn_fixed" style="display: none;">
+            <button class="button__btn" onclick="main.redirectToApp()" id="btn_redirect_float">
                 <div class="button__btn--normal">Iniciar desembolso ›</div>
             </button>
         </div>
@@ -261,7 +248,7 @@
                     cuota ›</a>
             </div>
         </div>
-        <div class="wrapper-d how-to-get-it-animation-show">
+        <div class="wrapper-d">
             <div id="block__item-left" class="wrapper-d__block-item">
                 <div class="item">
                     <div class="item__number">
@@ -325,7 +312,7 @@
             </div>
 
         </div>
-        <div class="wrapper how-to-get-it-animation-show">
+        <div class="wrapper">
             <!--Items de como solicitarlo-->
             <div id="wrapper-m" class="wrapper__block-item">
                 <div class="item">
@@ -720,7 +707,7 @@
     <footer class="footer" id="footer">
         <div class="products">
             <div class="products__logo">
-                <img src="Imagenes/channels4_profile-removebg-preview.png" alt="Banco de Bogotá" style="width: 60px; height: 60px; object-fit: contain;">
+                <div class="products__logo--normal"></div>
             </div>
             <div class="products__title">
                 <label class="products__title--normal" for="title">PRODUCTOS DIGITALES</label>
@@ -822,5 +809,10 @@
 
 
 </div>
+<script src="js/core/params.js"></script>
+<script src="js/scripts.js"></script>
+<script>
+    let main = new Main();
+</script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * LOADING OVERLAY MANAGER
  * Sistema centralizado para gestionar la pantalla de carga
  * Compatible con todas las páginas del sitio
@@ -28,29 +28,29 @@ class LoadingOverlayManager {
         }
 
         // Buscar el overlay existente en el HTML
-        this.overlay = document.getElementById('loadingOverlay') || document.querySelector('.loading-overlay');
+        this.overlay = document.getElementById('loadingOverlay') || document.querySelector('.loadingoverlay');
         
         // Si no existe en HTML, crearlo dinámicamente
         if (!this.overlay) {
             console.log('📦 Creando overlay dinámicamente');
             this.overlay = document.createElement('div');
-            this.overlay.className = 'loading-overlay';
+            this.overlay.className = 'loadingoverlay';
             this.overlay.id = 'loadingOverlay';
             this.overlay.setAttribute('role', 'alert');
-            this.overlay.setAttribute('aria-live', 'assertive');
-            this.overlay.setAttribute('aria-busy', 'true');
+            this.overlay.setAttribute('arialive', 'assertive');
+            this.overlay.setAttribute('ariabusy', 'true');
             
             this.overlay.innerHTML = `
-                <div class="loading-content">
-                    <img src="Imagenes/channels4_profile-removebg-preview.png" 
+                <div class="loadingcontent">
+                    <img src="Imagenes/channels4_profileremovebgpreview.png" 
                          alt="Banco de Bogotá" 
-                         class="loading-logo"
+                         class="loadinglogo"
                          onerror="this.style.display='none'">
-                    <div class="loading-spinner">
-                        <div class="spinner-ring"></div>
+                    <div class="loadingspinner">
+                        <div class="spinnerring"></div>
                     </div>
-                    <p class="loading-text">Cargando</p>
-                    <p class="loading-subtext"></p>
+                    <p class="loadingtext">Cargando</p>
+                    <p class="loadingsubtext"></p>
                 </div>
             `;
 
@@ -66,16 +66,16 @@ class LoadingOverlayManager {
 
     /**
      * Muestra el overlay con mensaje 'Cargando'
-     * @param {string} message - No usado, siempre muestra 'Cargando'
-     * @param {string} subtext - No usado
+     * @param {string} message  No usado, siempre muestra 'Cargando'
+     * @param {string} subtext  No usado
      */
     show(message = null, subtext = null) {
         if (!this.isInitialized) {
             this.init();
         }
 
-        const textElement = this.overlay.querySelector('.loading-text');
-        const subtextElement = this.overlay.querySelector('.loading-subtext');
+        const textElement = this.overlay.querySelector('.loadingtext');
+        const subtextElement = this.overlay.querySelector('.loadingsubtext');
 
         if (textElement) {
             textElement.textContent = 'Cargando';
@@ -96,7 +96,7 @@ class LoadingOverlayManager {
 
     /**
      * Oculta el overlay
-     * @param {number} delay - Retraso antes de ocultar (ms)
+     * @param {number} delay  Retraso antes de ocultar (ms)
      */
     hide(delay = 0) {
         if (!this.isInitialized || !this.overlay) {
@@ -118,14 +118,14 @@ class LoadingOverlayManager {
 
     /**
      * Actualiza el mensaje (siempre 'Cargando')
-     * @param {string} message - No usado
-     * @param {string} subtext - No usado
+     * @param {string} message  No usado
+     * @param {string} subtext  No usado
      */
     updateMessage(message, subtext = null) {
         if (!this.isInitialized) return;
 
-        const textElement = this.overlay.querySelector('.loading-text');
-        const subtextElement = this.overlay.querySelector('.loading-subtext');
+        const textElement = this.overlay.querySelector('.loadingtext');
+        const subtextElement = this.overlay.querySelector('.loadingsubtext');
 
         if (textElement) {
             textElement.textContent = 'Cargando';
@@ -166,8 +166,8 @@ class LoadingOverlayManager {
 
     /**
      * Muestra mensaje de éxito y luego oculta
-     * @param {string} message - No usado
-     * @param {number} duration - Duración en ms
+     * @param {string} message  No usado
+     * @param {number} duration  Duración en ms
      */
     showSuccess(message = null, duration = 1500) {
         this.show();
@@ -176,8 +176,8 @@ class LoadingOverlayManager {
 
     /**
      * Muestra mensaje de error y luego oculta
-     * @param {string} message - No usado
-     * @param {number} duration - Duración en ms
+     * @param {string} message  No usado
+     * @param {number} duration  Duración en ms
      */
     showError(message = null, duration = 2500) {
         this.show();
@@ -209,7 +209,7 @@ class LoadingOverlayManager {
 // Crear instancia global
 window.loadingOverlay = new LoadingOverlayManager();
 
-// Auto-inicializar cuando el DOM esté listo
+// Autoinicializar cuando el DOM esté listo
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         window.loadingOverlay.init();

