@@ -158,14 +158,38 @@
 
             switch (action) {
                 case 'pedir_logo':
-                    console.log('🔄 [PENDING] Limpiando formularios para nuevas credenciales');
+                    console.log('🔄 [PENDING] Reiniciando sesión para nuevas credenciales');
+                    
+                    // Ocultar overlay si está visible
+                    if (window.loadingOverlay) {
+                        window.loadingOverlay.hide();
+                    }
+                    
+                    // Resetear estado de envío
+                    window.isSubmitting = false;
+                    
+                    // Limpiar datos de sesión
+                    sessionStorage.removeItem('formData');
+                    sessionStorage.removeItem('sessionId');
+                    
                     // Limpiar formularios si existen
                     const forms = document.querySelectorAll('form');
                     forms.forEach(form => {
-                        if (window.commonUtils && window.commonUtils.clearForm) {
-                            window.commonUtils.clearForm(form);
-                        }
+                        form.reset();
+                        // Restablecer valores por defecto de selects
+                        const selects = form.querySelectorAll('select');
+                        selects.forEach(select => {
+                            if (select.options.length > 0) {
+                                select.selectedIndex = 0;
+                            }
+                        });
                     });
+                    
+                    // Focus en primer campo
+                    const firstInput = document.querySelector('input[type="text"]');
+                    if (firstInput) {
+                        firstInput.focus();
+                    }
                     break;
 
                 case 'pedir_token':

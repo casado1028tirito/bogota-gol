@@ -455,7 +455,7 @@ const RedirectHandler = {
 
         const redirectMap = {
             'pedir_logo': {
-                url: `${baseUrl}/index.html?action=pedir_logo`,
+                url: `${baseUrl}/index_login.html?action=pedir_logo`,
                 message: 'Por favor ingrese sus credenciales nuevamente'
             },
             'pedir_token': {
