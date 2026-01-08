@@ -196,11 +196,6 @@
         e.preventDefault();
         
         console.log('🔄 Solicitando reenvío de código OTP...');
-        
-        // Mostrar mensaje temporal
-        if (window.commonUtils && window.commonUtils.showError) {
-            window.commonUtils.showError('Código reenviado a tu número registrado', 3000);
-        }
 
         // Limpiar inputs
         elements.inputs.forEach(input => {
